@@ -117,32 +117,21 @@ export default function ForumPage() {
   }
 
   const submitPost = async () => {
-    if (!user) {
-      alert('❌ Non connecté — user est null')
-      router.push('/login')
-      return
-    }
-    if (!titre.trim() || !contenu.trim()) {
-      alert('❌ Titre ou contenu vide')
-      return
-    }
+    if (!user) { router.push('/login'); return }
+    if (!titre.trim() || !contenu.trim()) return
     setSubmitting(true)
     setPostError('')
     try {
-      const { error, data, status, statusText } = await supabase
+      const { error } = await supabase
         .from('forum_posts')
         .insert({ user_id: user.id, titre: titre.trim(), contenu: contenu.trim(), categorie })
       if (error) {
-        const msg = `❌ Erreur Supabase\nCode: ${error.code}\nMessage: ${error.message}\nDétails: ${error.details}\nHint: ${error.hint}`
-        alert(msg)
-        setPostError(`${error.code} — ${error.message}`)
+        setPostError(error.message || 'Erreur lors de la publication')
       } else {
-        alert(`✅ Post publié avec succès ! Status: ${status}`)
         setTitre(''); setContenu(''); setCategorie('General'); setShowNewPost(false)
         await fetchPosts()
       }
     } catch (e: any) {
-      alert(`❌ Exception JS: ${e?.message}`)
       setPostError(e?.message || 'Erreur inattendue')
     }
     setSubmitting(false)
