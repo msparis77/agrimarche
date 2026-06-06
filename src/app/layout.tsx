@@ -4,6 +4,7 @@ import './globals.css'
 import { AuthProvider } from '@/hooks/useAuth'
 import { LangProvider } from '@/hooks/useLang'
 import Navbar from '@/components/layout/Navbar'
+import WhatsAppButton from '@/components/WhatsAppButton'
 
 const inter = Inter({ subsets: ['latin'] })
 
@@ -25,6 +26,7 @@ export default function RootLayout({
           <LangProvider>
             <Navbar />
             <main>{children}</main>
+            <WhatsAppButton />
           </LangProvider>
         </AuthProvider>
       </body>

@@ -102,9 +102,9 @@ export default function ProductDetailPage() {
               <span className="text-8xl">{product.categories?.icone || '🌾'}</span>
             )}
           </div>
-          {product.images?.length > 1 && (
+          {(product.images?.length ?? 0) > 1 && (
             <div className="flex gap-2">
-              {product.images.map((img, i) => (
+             {(product.images ?? []).map((img, i) => (
                 <button
                   key={i}
                   onClick={() => setActiveImg(i)}
