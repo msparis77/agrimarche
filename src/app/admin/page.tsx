@@ -156,6 +156,7 @@ export default function AdminPage() {
   const [section, setSection] = useState<Section>('overview')
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
+  const [fetchError, setFetchError] = useState('')
 
   // Vérifier si déjà déverrouillé dans cette session
   useEffect(() => {
@@ -188,63 +189,74 @@ export default function AdminPage() {
 
   const fetchAll = async () => {
     setRefreshing(true)
-    const now = new Date()
-    const weekAgo = new Date(now.getTime() - 7 * 86400000).toISOString()
-    const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate()).toISOString()
+    setFetchError('')
+    try {
+      const now = new Date()
+      const weekAgo = new Date(now.getTime() - 7 * 86400000).toISOString()
+      const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate()).toISOString()
 
-    const [
-      { count: totalUsers },
-      { count: usersWeek },
-      { count: totalListings },
-      { count: listingsToday },
-      { count: totalMessages },
-      { count: totalTx },
-      { data: usersData },
-      { data: listingsData },
-      { data: prixData },
-      { data: txData },
-      { data: verifsData },
-    ] = await Promise.all([
-      supabase.from('profiles').select('*', { count: 'exact', head: true }),
-      supabase.from('profiles').select('*', { count: 'exact', head: true }).gte('created_at', weekAgo),
-      supabase.from('products').select('*', { count: 'exact', head: true }),
-      supabase.from('products').select('*', { count: 'exact', head: true }).gte('created_at', todayStart),
-      supabase.from('messages').select('*', { count: 'exact', head: true }),
-      supabase.from('transactions').select('*', { count: 'exact', head: true }),
-      supabase.from('profiles').select('id, nom, email, role, pays, verifie, created_at').order('created_at', { ascending: false }).limit(200),
-      supabase.from('products').select('id, titre, description, prix, devise, unite, ville, pays, statut, created_at, categories(nom_fr)').order('created_at', { ascending: false }).limit(200),
-      supabase.from('prix_marche').select('*').order('created_at', { ascending: false }).limit(500),
-      supabase.from('transactions').select('*, buyer:buyer_id(*), seller:seller_id(*), products(titre)').order('created_at', { ascending: false }).limit(100),
-      supabase.from('vendor_verifications').select('*, profiles(nom, email, pays, verifie)').order('created_at', { ascending: false }),
-    ])
+      // Tables de base (toujours présentes)
+      const [
+        { count: totalUsers, error: e1 },
+        { count: usersWeek },
+        { count: totalListings, error: e2 },
+        { count: listingsToday },
+        { count: totalMessages },
+        { data: usersData, error: e3 },
+        { data: listingsData },
+      ] = await Promise.all([
+        supabase.from('profiles').select('*', { count: 'exact', head: true }),
+        supabase.from('profiles').select('*', { count: 'exact', head: true }).gte('created_at', weekAgo),
+        supabase.from('products').select('*', { count: 'exact', head: true }),
+        supabase.from('products').select('*', { count: 'exact', head: true }).gte('created_at', todayStart),
+        supabase.from('messages').select('*', { count: 'exact', head: true }),
+        supabase.from('profiles').select('id, nom, email, role, pays, verifie, created_at').order('created_at', { ascending: false }).limit(200),
+        supabase.from('products').select('id, titre, description, prix, devise, unite, ville, pays, statut, created_at').order('created_at', { ascending: false }).limit(200),
+      ])
 
-    setKpis({
-      users: totalUsers || 0,
-      usersWeek: usersWeek || 0,
-      listings: totalListings || 0,
-      listingsToday: listingsToday || 0,
-      messages: totalMessages || 0,
-      transactions: totalTx || 0,
-    })
+      if (e1) throw new Error(`profiles: ${e1.message}`)
+      if (e2) throw new Error(`products: ${e2.message}`)
+      if (e3) throw new Error(`profiles data: ${e3.message}`)
 
-    // Country stats from users
-    const byCountry: Record<string, number> = {}
-    for (const u of usersData || []) {
-      const p = u.pays || 'Inconnu'
-      byCountry[p] = (byCountry[p] || 0) + 1
+      setKpis({
+        users: totalUsers || 0,
+        usersWeek: usersWeek || 0,
+        listings: totalListings || 0,
+        listingsToday: listingsToday || 0,
+        messages: totalMessages || 0,
+        transactions: 0,
+      })
+
+      const byCountry: Record<string, number> = {}
+      for (const u of usersData || []) {
+        const p = u.pays || 'Inconnu'
+        byCountry[p] = (byCountry[p] || 0) + 1
+      }
+      setCountryStats(Object.entries(byCountry).map(([pays, count]) => ({ pays, count })).sort((a, b) => b.count - a.count))
+
+      setUsers(usersData || [])
+      setListings(listingsData || [])
+      setMsgCount(totalMessages || 0)
+      setConvCount(Math.floor((totalMessages || 0) / 3))
+
+      // Tables optionnelles (peuvent ne pas exister)
+      const { data: prixData } = await supabase.from('prix_marche').select('*').order('created_at', { ascending: false }).limit(500)
+      setPrix(prixData || [])
+
+      const { data: txData, count: totalTx } = await supabase.from('transactions').select('*, products(titre)', { count: 'exact' }).order('created_at', { ascending: false }).limit(100)
+      setTransactions(txData || [])
+      setKpis(prev => ({ ...prev, transactions: totalTx || 0 }))
+
+      const { data: verifsData } = await supabase.from('vendor_verifications').select('*, profiles(nom, email, pays, verifie)').order('created_at', { ascending: false })
+      setVerifs(verifsData || [])
+
+    } catch (err: any) {
+      console.error('Admin fetchAll error:', err)
+      setFetchError(err?.message || 'Erreur lors du chargement des données')
+    } finally {
+      setLoading(false)
+      setRefreshing(false)
     }
-    setCountryStats(Object.entries(byCountry).map(([pays, count]) => ({ pays, count })).sort((a, b) => b.count - a.count))
-
-    setUsers(usersData || [])
-    setListings(listingsData || [])
-    setPrix(prixData || [])
-    setTransactions(txData || [])
-    setVerifs(verifsData || [])
-    setMsgCount(totalMessages || 0)
-    setConvCount(Math.floor((totalMessages || 0) / 3)) // approximation
-
-    setLoading(false)
-    setRefreshing(false)
   }
 
   const updateVerif = async (id: string, statut: string) => {
@@ -305,6 +317,19 @@ export default function AdminPage() {
     { id: 'messages',  icon: <MessageSquare size={18} />,   label: 'Messages & Tx' },
     { id: 'alerts',    icon: <AlertTriangle size={18} />,   label: 'Alertes',           badge: pendingVerifs.length + newUsersToday.length },
   ]
+
+  if (fetchError) return (
+    <div className="min-h-screen bg-[#0a4a2f] flex items-center justify-center px-4">
+      <div className="bg-white rounded-3xl p-8 text-center max-w-md w-full">
+        <div className="text-5xl mb-4">⚠️</div>
+        <p className="font-bold text-gray-900 text-lg mb-2">Erreur de chargement</p>
+        <p className="text-sm text-red-600 bg-red-50 rounded-xl px-4 py-3 mb-4 font-mono break-all">{fetchError}</p>
+        <button onClick={fetchAll} className="bg-[#0a4a2f] text-white px-6 py-2.5 rounded-xl font-semibold hover:bg-green-900 transition">
+          Réessayer
+        </button>
+      </div>
+    </div>
+  )
 
   if (loading || !profile) return (
     <div className="min-h-screen bg-[#0a4a2f] flex items-center justify-center">
