@@ -1,14 +1,102 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import {
   LayoutDashboard, Users, Megaphone, TrendingUp, MessageSquare,
   AlertTriangle, LogOut, Download, RefreshCw, CheckCircle,
-  XCircle, Eye, BadgeCheck, AlertCircle, ChevronRight
+  XCircle, Eye, BadgeCheck, AlertCircle, Lock, ShieldCheck
 } from 'lucide-react'
 import { supabase, formatPrice } from '@/lib/supabase'
 import { useAuth } from '@/hooks/useAuth'
+
+// ── Écran de verrouillage PIN ─────────────────────────────────────
+function PinLock({ onUnlock }: { onUnlock: () => void }) {
+  const [pin, setPin] = useState('')
+  const [error, setError] = useState('')
+  const [checking, setChecking] = useState(false)
+  const [attempts, setAttempts] = useState(0)
+  const inputRef = useRef<HTMLInputElement>(null)
+
+  useEffect(() => { inputRef.current?.focus() }, [])
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!pin.trim() || checking) return
+    setChecking(true)
+    setError('')
+
+    const res = await fetch('/api/admin-auth', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ pin }),
+    })
+
+    if (res.ok) {
+      sessionStorage.setItem('admin_unlocked', '1')
+      onUnlock()
+    } else {
+      const att = attempts + 1
+      setAttempts(att)
+      setError(att >= 3 ? `Code incorrect (${att} tentatives)` : 'Code incorrect')
+      setPin('')
+      inputRef.current?.focus()
+    }
+    setChecking(false)
+  }
+
+  return (
+    <div className="min-h-screen bg-[#0a4a2f] flex items-center justify-center px-4">
+      <div className="bg-white rounded-3xl shadow-2xl p-8 w-full max-w-sm">
+        <div className="text-center mb-8">
+          <div className="w-16 h-16 bg-[#0a4a2f] rounded-2xl flex items-center justify-center mx-auto mb-4">
+            <Lock size={28} className="text-white" />
+          </div>
+          <h1 className="text-2xl font-extrabold text-gray-900">Zone Admin</h1>
+          <p className="text-sm text-gray-500 mt-1">🌾 AgriMarché — Accès restreint</p>
+        </div>
+
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <label className="block text-sm font-semibold text-gray-700 mb-2">Code d'accès</label>
+            <input
+              ref={inputRef}
+              type="password"
+              value={pin}
+              onChange={e => setPin(e.target.value)}
+              placeholder="••••••••"
+              className="w-full border-2 border-gray-200 rounded-2xl px-4 py-3 text-center text-lg tracking-widest font-bold focus:outline-none focus:border-[#0a4a2f] transition"
+              autoComplete="off"
+              disabled={checking}
+            />
+          </div>
+
+          {error && (
+            <div className="bg-red-50 border border-red-200 text-red-600 text-sm px-4 py-2.5 rounded-xl text-center font-medium">
+              🔒 {error}
+            </div>
+          )}
+
+          <button
+            type="submit"
+            disabled={checking || !pin.trim()}
+            className="w-full bg-[#0a4a2f] text-white font-bold py-3.5 rounded-2xl hover:bg-green-900 transition disabled:opacity-50 flex items-center justify-center gap-2"
+          >
+            {checking ? (
+              <><RefreshCw size={16} className="animate-spin" /> Vérification...</>
+            ) : (
+              <><ShieldCheck size={16} /> Accéder au tableau de bord</>
+            )}
+          </button>
+        </form>
+
+        <p className="text-center text-xs text-gray-400 mt-6">
+          Accès réservé aux administrateurs AgriMarché
+        </p>
+      </div>
+    </div>
+  )
+}
 
 type Section = 'overview' | 'users' | 'listings' | 'prices' | 'messages' | 'alerts'
 
@@ -64,9 +152,15 @@ function KpiCard({ icon, label, value, sub, color }: {
 export default function AdminPage() {
   const { user, profile } = useAuth()
   const router = useRouter()
+  const [unlocked, setUnlocked] = useState(false)
   const [section, setSection] = useState<Section>('overview')
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
+
+  // Vérifier si déjà déverrouillé dans cette session
+  useEffect(() => {
+    if (sessionStorage.getItem('admin_unlocked') === '1') setUnlocked(true)
+  }, [])
 
   // Data
   const [kpis, setKpis] = useState({ users: 0, usersWeek: 0, listings: 0, listingsToday: 0, messages: 0, transactions: 0 })
@@ -213,8 +307,16 @@ export default function AdminPage() {
 
   if (!profile) return null
   if (profile.role !== 'admin') return (
-    <div className="text-center py-20 text-gray-500">Accès réservé aux administrateurs</div>
+    <div className="min-h-screen bg-[#0a4a2f] flex items-center justify-center">
+      <div className="bg-white rounded-3xl p-8 text-center max-w-sm">
+        <div className="text-5xl mb-4">🚫</div>
+        <p className="font-bold text-gray-900 text-lg">Accès refusé</p>
+        <p className="text-sm text-gray-500 mt-1">Votre compte n'a pas les droits admin.</p>
+        <button onClick={() => router.push('/')} className="mt-4 text-sm text-[#0a4a2f] font-medium underline">Retour au site</button>
+      </div>
+    </div>
   )
+  if (!unlocked) return <PinLock onUnlock={() => setUnlocked(true)} />
 
   return (
     <div className="flex min-h-screen bg-gray-50">
@@ -246,6 +348,10 @@ export default function AdminPage() {
           <button onClick={fetchAll} disabled={refreshing}
             className="w-full flex items-center gap-2 px-3 py-2 text-xs text-green-300 hover:text-white transition">
             <RefreshCw size={14} className={refreshing ? 'animate-spin' : ''} /> Actualiser
+          </button>
+          <button onClick={() => { sessionStorage.removeItem('admin_unlocked'); setUnlocked(false) }}
+            className="w-full flex items-center gap-2 px-3 py-2 text-xs text-red-300 hover:text-red-100 transition">
+            <Lock size={14} /> Verrouiller
           </button>
           <button onClick={() => router.push('/')}
             className="w-full flex items-center gap-2 px-3 py-2 text-xs text-green-300 hover:text-white transition">
