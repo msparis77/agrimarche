@@ -2,14 +2,14 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { Home, Search, MessageSquare, User, Plus } from 'lucide-react'
+import { Home, Search, MessageSquare, User, Megaphone } from 'lucide-react'
 import { useAuth } from '@/hooks/useAuth'
 import { useUnreadMessages } from '@/hooks/useUnreadMessages'
 
 const tabs = [
   { href: '/', icon: Home, label: 'Accueil' },
   { href: '/annonces', icon: Search, label: 'Annonces' },
-  { href: '/vendre', icon: Plus, label: 'Vendre', center: true },
+  { href: '/vendre', icon: Megaphone, label: 'Publier', protected: true },
   { href: '/messages', icon: MessageSquare, label: 'Messages', protected: true, badge: true },
   { href: '/dashboard', icon: User, label: 'Profil', protected: true },
 ]
