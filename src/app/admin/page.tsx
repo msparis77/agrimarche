@@ -77,6 +77,7 @@ export default function AdminPage() {
   const router = useRouter()
   const [status, setStatus] = useState<'loading' | 'unauth' | 'notadmin' | 'ready' | 'error'>('loading')
   const [errorMsg, setErrorMsg] = useState('')
+  const [debugInfo, setDebugInfo] = useState('')
   const [unlocked, setUnlocked] = useState(false)
   const [stats, setStats] = useState({ users: 0, listings: 0, messages: 0 })
   const [users, setUsers] = useState<any[]>([])
@@ -84,14 +85,12 @@ export default function AdminPage() {
   const [refreshing, setRefreshing] = useState(false)
 
   useEffect(() => {
-    // Lire sessionStorage uniquement côté client (jamais pendant le SSR)
     if (typeof window !== 'undefined' && sessionStorage.getItem('admin_unlocked') === '1') {
       setUnlocked(true)
     }
     checkAuthAndLoad()
   }, [])
 
-  // Redirection unauth dans un useEffect, jamais pendant le render
   useEffect(() => {
     if (status === 'unauth') {
       router.push('/login?next=/admin')
@@ -100,27 +99,29 @@ export default function AdminPage() {
 
   const checkAuthAndLoad = async () => {
     setStatus('loading')
+    setDebugInfo('Démarrage...')
     try {
-      // 1. Vérifier la session
-      const { data: { session }, error: sessionError } = await supabase.auth.getSession()
-      if (sessionError) throw new Error(`Session: ${sessionError.message}`)
-      if (!session?.user) { setStatus('unauth'); return }
+      // 1. Vérifier l'utilisateur (getUser = vérification serveur, plus fiable que getSession)
+      setDebugInfo('Vérification utilisateur...')
+      const { data: { user }, error: userError } = await supabase.auth.getUser()
+      if (userError) throw new Error(`Auth: ${userError.message}`)
+      if (!user) { setDebugInfo('Aucun utilisateur connecté'); setStatus('unauth'); return }
+      setDebugInfo(`Utilisateur: ${user.email} (${user.id.slice(0, 8)}...)`)
 
       // 2. Vérifier le rôle admin
       const { data: profile, error: profileError } = await supabase
         .from('profiles')
-        .select('role')
-        .eq('id', session.user.id)
+        .select('role, email')
+        .eq('id', user.id)
         .maybeSingle()
-      if (profileError) throw new Error(`Profil: ${profileError.message}`)
-      if (!profile || profile.role !== 'admin') { setStatus('notadmin'); return }
+      if (profileError) throw new Error(`Profil DB: ${profileError.message}`)
+      if (!profile) throw new Error(`Aucun profil trouvé pour id=${user.id.slice(0, 8)}`)
+      setDebugInfo(`Profil: email=${profile.email} role=${profile.role}`)
+      if (profile.role !== 'admin') { setStatus('notadmin'); return }
 
-      // 3. Vérifier le PIN (sessionStorage est disponible ici car on est dans useEffect → client only)
+      // 3. Vérifier le PIN
       const alreadyUnlocked = sessionStorage.getItem('admin_unlocked') === '1'
-      if (!alreadyUnlocked) {
-        setStatus('ready') // on affiche PinLock
-        return
-      }
+      if (!alreadyUnlocked) { setStatus('ready'); return }
 
       // 4. Charger les stats
       await loadStats()
@@ -180,6 +181,7 @@ export default function AdminPage() {
       <div className="text-center text-white">
         <RefreshCw size={32} className="animate-spin mx-auto mb-3 text-green-300" />
         <p className="text-green-300 text-sm">Vérification en cours...</p>
+        {debugInfo && <p className="text-green-400 text-xs mt-2 font-mono">{debugInfo}</p>}
       </div>
     </div>
   )
