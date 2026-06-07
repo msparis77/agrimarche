@@ -24,7 +24,7 @@ export async function POST(req: NextRequest) {
     }
 
     const response = await client.messages.create({
-      model: 'claude-haiku-4-5',
+      model: 'claude-haiku-4-5-20251001',
       max_tokens: 1024,
       system: SYSTEM_PROMPT,
       messages,
@@ -34,10 +34,11 @@ export async function POST(req: NextRequest) {
       ?? "Désolé, je n'ai pas pu répondre. Réessayez."
 
     return NextResponse.json({ reply: text })
-  } catch (error) {
+  } catch (error: any) {
     console.error('AgriAssistant error:', error)
+    const detail = error?.message || error?.error?.message || String(error)
     return NextResponse.json(
-      { error: "Une erreur s'est produite. Réessayez." },
+      { error: detail, reply: null },
       { status: 500 }
     )
   }

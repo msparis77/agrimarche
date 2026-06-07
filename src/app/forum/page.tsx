@@ -213,7 +213,7 @@ export default function ForumPage() {
       })
 
       const data = await response.json()
-      const reply = data.reply || "Désolé, je n'ai pas pu répondre. Réessayez."
+      const reply = data.reply || data.error || "Désolé, je n'ai pas pu répondre. Réessayez."
       setAiMessages(prev => [...prev, { role: 'assistant', content: reply }])
     } catch {
       setAiMessages(prev => [...prev, {
