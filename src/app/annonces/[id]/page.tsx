@@ -19,13 +19,21 @@ export default function AnnonceDetailPage() {
     if (!id) return
     supabase
       .from('products')
-      .select('*, profiles(id, nom, verifie, role, pays, created_at), categories(nom_fr, icone)')
+      .select('*, categories(nom_fr, icone)')
       .eq('id', id)
       .single()
-      .then(({ data }) => {
-        setProduct(data)
+      .then(async ({ data }) => {
+        if (data) {
+          supabase.from('products').update({ vues: (data.vues || 0) + 1 }).eq('id', id)
+          // Fetch seller separately (no FK declared between products and profiles)
+          const { data: seller } = await supabase
+            .from('profiles')
+            .select('id, nom, verifie, role, pays, created_at')
+            .eq('id', data.user_id)
+            .single()
+          setProduct({ ...data, profiles: seller })
+        }
         setLoading(false)
-        if (data) supabase.from('products').update({ vues: (data.vues || 0) + 1 }).eq('id', id)
       })
   }, [params?.id])
 

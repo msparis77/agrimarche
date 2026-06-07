@@ -24,7 +24,7 @@ export default function AnnoncesPage() {
     setLoading(true)
     let q = supabase
       .from('products')
-      .select('*, profiles(nom, verifie), categories(nom_fr, icone)')
+      .select('*, categories(nom_fr, icone)')
       .order('created_at', { ascending: false })
       .limit(60)
     if (selectedCat) q = q.eq('categorie_id', selectedCat)

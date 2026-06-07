@@ -15,7 +15,7 @@ export default function HomePage() {
   useEffect(() => {
     supabase
       .from('products')
-      .select('*, profiles(nom, verifie), categories(nom_fr, icone)')
+      .select('*, categories(nom_fr, icone)')
       .order('created_at', { ascending: false })
       .limit(3)
       .then(({ data }) => { setProducts(data || []); setLoading(false) })
