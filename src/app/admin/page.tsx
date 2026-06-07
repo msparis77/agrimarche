@@ -84,8 +84,19 @@ export default function AdminPage() {
   const [refreshing, setRefreshing] = useState(false)
 
   useEffect(() => {
+    // Lire sessionStorage uniquement côté client (jamais pendant le SSR)
+    if (typeof window !== 'undefined' && sessionStorage.getItem('admin_unlocked') === '1') {
+      setUnlocked(true)
+    }
     checkAuthAndLoad()
   }, [])
+
+  // Redirection unauth dans un useEffect, jamais pendant le render
+  useEffect(() => {
+    if (status === 'unauth') {
+      router.push('/login?next=/admin')
+    }
+  }, [status])
 
   const checkAuthAndLoad = async () => {
     setStatus('loading')
@@ -104,9 +115,10 @@ export default function AdminPage() {
       if (profileError) throw new Error(`Profil: ${profileError.message}`)
       if (!profile || profile.role !== 'admin') { setStatus('notadmin'); return }
 
-      // 3. Vérifier le PIN
-      if (sessionStorage.getItem('admin_unlocked') !== '1') {
-        setStatus('ready') // on affiche PinLock avant les stats
+      // 3. Vérifier le PIN (sessionStorage est disponible ici car on est dans useEffect → client only)
+      const alreadyUnlocked = sessionStorage.getItem('admin_unlocked') === '1'
+      if (!alreadyUnlocked) {
+        setStatus('ready') // on affiche PinLock
         return
       }
 
@@ -158,7 +170,7 @@ export default function AdminPage() {
 
   const handleSignOut = async () => {
     await supabase.auth.signOut()
-    sessionStorage.removeItem('admin_unlocked')
+    if (typeof window !== 'undefined') sessionStorage.removeItem('admin_unlocked')
     router.push('/')
   }
 
@@ -186,8 +198,7 @@ export default function AdminPage() {
   )
 
   if (status === 'unauth') {
-    router.push('/login?next=/admin')
-    return null
+    return null // la redirection est gérée dans useEffect
   }
 
   if (status === 'notadmin') return (
@@ -201,8 +212,8 @@ export default function AdminPage() {
     </div>
   )
 
-  // PIN non validé encore
-  if (sessionStorage.getItem('admin_unlocked') !== '1') {
+  // PIN non validé encore (utiliser le state React, pas sessionStorage directement)
+  if (!unlocked) {
     return <PinLock onUnlock={handleUnlock} />
   }
 
@@ -225,7 +236,7 @@ export default function AdminPage() {
             Actualiser
           </button>
           <button
-            onClick={() => { sessionStorage.removeItem('admin_unlocked'); checkAuthAndLoad() }}
+            onClick={() => { sessionStorage.removeItem('admin_unlocked'); setUnlocked(false); checkAuthAndLoad() }}
             className="bg-white/10 hover:bg-white/20 px-3 py-1.5 rounded-lg text-sm flex items-center gap-1.5 transition"
           >
             <Lock size={14} /> Verrouiller
