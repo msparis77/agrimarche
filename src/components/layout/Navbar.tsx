@@ -53,7 +53,7 @@ export default function Navbar() {
                 <Link href="/mes-annonces" className="text-sm font-medium text-gray-600 hover:text-[#166534] transition">Mes annonces</Link>
                 <Link href="/dashboard" className="text-sm font-medium text-gray-600 hover:text-[#166534] transition">{t.nav.dashboard}</Link>
                 <Link href="/vendre" className="bg-[#166534] text-white font-bold px-4 py-2 rounded-xl text-sm hover:bg-green-800 transition">
-                  + {t.nav.sell}
+                  {t.nav.sell}
                 </Link>
                 <button onClick={signOut} className="p-1.5 text-gray-400 hover:text-red-500 transition">
                   <LogOut size={16} />

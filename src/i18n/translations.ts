@@ -3,7 +3,7 @@ export const translations = {
     nav: {
       home: "Accueil",
       search: "Rechercher",
-      sell: "Vendre",
+      sell: "Publier",
       messages: "Messages",
       dashboard: "Tableau de bord",
       login: "Connexion",
@@ -120,7 +120,7 @@ export const translations = {
     nav: {
       home: "Home",
       search: "Search",
-      sell: "Sell",
+      sell: "Publish",
       messages: "Messages",
       dashboard: "Dashboard",
       login: "Login",
