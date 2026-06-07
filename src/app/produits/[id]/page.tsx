@@ -16,8 +16,6 @@ export default function ProductDetailPage() {
   const [loading, setLoading] = useState(true)
   const [activeImg, setActiveImg] = useState(0)
   const [isFav, setIsFav] = useState(false)
-  const [message, setMessage] = useState('')
-  const [msgSent, setMsgSent] = useState(false)
 
   useEffect(() => {
     const id = params?.id as string
@@ -51,17 +49,16 @@ export default function ProductDetailPage() {
     setIsFav(!isFav)
   }
 
-  const sendMessage = async () => {
-    if (!user || !product || !message.trim()) return
+  const contactSeller = async () => {
+    if (!user) { router.push('/login'); return }
+    if (!product) return
+    // Send initial message then redirect to chat
     await supabase.from('messages').insert({
       sender_id: user.id,
       receiver_id: product.user_id,
-      product_id: product.id,
-      contenu: message,
+      contenu: `Bonjour, je suis intéressé(e) par votre annonce "${product.titre}". Êtes-vous disponible ?`,
     })
-    setMessage('')
-    setMsgSent(true)
-    setTimeout(() => setMsgSent(false), 3000)
+    router.push(`/messages?to=${product.user_id}`)
   }
 
   if (loading) {
@@ -199,29 +196,21 @@ export default function ProductDetailPage() {
             )}
 
             {user && user.id !== product.user_id && (
-              <div className="flex gap-2">
-                <input
-                  value={message}
-                  onChange={e => setMessage(e.target.value)}
-                  placeholder="Envoyer un message..."
-                  className="flex-1 border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-[#0a4a2f]"
-                  onKeyDown={e => e.key === 'Enter' && sendMessage()}
-                />
-                <button
-                  onClick={sendMessage}
-                  className="bg-[#0a4a2f] text-white px-4 rounded-xl hover:bg-green-900 transition"
-                >
-                  ✉️
-                </button>
-              </div>
+              <button
+                onClick={contactSeller}
+                className="flex items-center justify-center gap-2 w-full bg-white border-2 border-[#0a4a2f] text-[#0a4a2f] font-bold py-3.5 rounded-xl hover:bg-green-50 transition active:scale-95"
+              >
+                <MessageCircle size={18} /> Contacter le vendeur
+              </button>
             )}
 
-            {msgSent && <p className="text-green-600 text-sm text-center">Message envoyé !</p>}
-
             {!user && (
-              <p className="text-center text-sm text-gray-500">
-                <a href="/login" className="text-[#0a4a2f] font-semibold">Connectez-vous</a> pour envoyer un message
-              </p>
+              <button
+                onClick={() => router.push('/login')}
+                className="flex items-center justify-center gap-2 w-full bg-white border-2 border-[#0a4a2f] text-[#0a4a2f] font-bold py-3.5 rounded-xl hover:bg-green-50 transition"
+              >
+                <MessageCircle size={18} /> Contacter le vendeur
+              </button>
             )}
           </div>
         </div>

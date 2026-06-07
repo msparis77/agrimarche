@@ -26,7 +26,7 @@ export default function RootLayout({
         <AuthProvider>
           <LangProvider>
             <Navbar />
-            <main className="pb-20 md:pb-0">{children}</main>
+            <main className="pb-16 md:pb-0">{children}</main>
             <WhatsAppButton />
             <BottomNav />
           </LangProvider>
