@@ -43,97 +43,78 @@ export default function Navbar() {
       )}
 
       {/* Navbar */}
-      <nav className="sticky top-0 z-50 bg-[#0a4a2f] text-white shadow-lg">
+      <nav className="sticky top-0 z-50 bg-[#166534] text-white" style={{ boxShadow: '0 2px 12px rgba(22,101,52,0.2)' }}>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-16">
+          <div className="flex items-center justify-between h-14 md:h-16">
+
             {/* Logo */}
-            <Link href="/" className="flex items-center gap-2 font-bold text-xl">
+            <Link href="/" className="flex items-center gap-2 font-bold text-lg">
               <span className="text-2xl">🌾</span>
-              <span className="text-[#f5c842]">AgriMarché</span>
+              <span className="text-[#f5c842] font-extrabold tracking-tight">AgriMarché</span>
               <span className="text-xs text-green-300 font-normal hidden sm:block">Afrique de l'Ouest</span>
             </Link>
 
             {/* Desktop nav */}
             <div className="hidden md:flex items-center gap-6">
-              <Link href="/" className="hover:text-[#f5c842] transition-colors text-sm">{t.nav.home}</Link>
-              <Link href="/recherche" className="hover:text-[#f5c842] transition-colors text-sm">{t.nav.search}</Link>
-              <Link href="/forum" className="hover:text-[#f5c842] transition-colors text-sm">🌾 Forum</Link>
+              <Link href="/" className="hover:text-[#f5c842] transition-colors text-sm font-medium">{t.nav.home}</Link>
+              <Link href="/recherche" className="hover:text-[#f5c842] transition-colors text-sm font-medium">{t.nav.search}</Link>
+              <Link href="/forum" className="hover:text-[#f5c842] transition-colors text-sm font-medium">🌾 Forum</Link>
               {user && (
                 <>
-                  <Link href="/messages" className="hover:text-[#f5c842] transition-colors text-sm flex items-center gap-1">
+                  <Link href="/messages" className="hover:text-[#f5c842] transition-colors text-sm font-medium flex items-center gap-1">
                     <MessageCircle size={15} /> {t.nav.messages}
                   </Link>
-                  <Link href="/mes-annonces" className="hover:text-[#f5c842] transition-colors text-sm flex items-center gap-1">
-                    📢 Mes annonces
-                  </Link>
-                  <Link href="/dashboard" className="hover:text-[#f5c842] transition-colors text-sm flex items-center gap-1">
+                  <Link href="/mes-annonces" className="hover:text-[#f5c842] transition-colors text-sm font-medium">📢 Mes annonces</Link>
+                  <Link href="/dashboard" className="hover:text-[#f5c842] transition-colors text-sm font-medium flex items-center gap-1">
                     <LayoutDashboard size={15} /> {t.nav.dashboard}
                   </Link>
-                  <Link href="/vendre" className="bg-[#f5c842] text-[#0a4a2f] font-bold px-4 py-1.5 rounded-lg text-sm hover:bg-yellow-400 transition flex items-center gap-1">
+                  <Link href="/vendre" className="bg-[#f5c842] text-[#166534] font-bold px-4 py-2 rounded-xl text-sm hover:bg-yellow-400 transition flex items-center gap-1 active:scale-95">
                     <PlusCircle size={15} /> {t.nav.sell}
                   </Link>
-                  <button onClick={signOut} className="hover:text-red-300 transition text-sm flex items-center gap-1">
-                    <LogOut size={15} />
+                  <button onClick={signOut} className="hover:text-red-300 transition text-sm p-1">
+                    <LogOut size={16} />
                   </button>
                 </>
               )}
               {!user && (
-                <Link href="/login" className="bg-[#f5c842] text-[#0a4a2f] font-bold px-4 py-1.5 rounded-lg text-sm hover:bg-yellow-400 transition flex items-center gap-1">
+                <Link href="/login" className="bg-[#f5c842] text-[#166534] font-bold px-4 py-2 rounded-xl text-sm hover:bg-yellow-400 transition flex items-center gap-1">
                   <User size={15} /> {t.nav.login}
                 </Link>
               )}
-              {/* Lang switcher */}
               <div className="flex gap-1">
                 {langs.map(l => (
-                  <button
-                    key={l}
-                    onClick={() => setLang(l)}
-                    className={`text-xs px-2 py-1 rounded transition ${lang === l ? 'bg-white/20 text-white' : 'text-green-300 hover:text-white'}`}
-                  >
+                  <button key={l} onClick={() => setLang(l)}
+                    className={`text-xs px-2 py-1 rounded-lg transition font-medium ${lang === l ? 'bg-white/20 text-white' : 'text-green-300 hover:text-white'}`}>
                     {langLabels[l]}
                   </button>
                 ))}
               </div>
             </div>
 
-            {/* Mobile menu button */}
-            <button className="md:hidden p-2" onClick={() => setOpen(!open)}>
-              {open ? <X size={24} /> : <Menu size={24} />}
-            </button>
+            {/* Mobile right — connexion rapide + langue */}
+            <div className="md:hidden flex items-center gap-2">
+              <div className="flex gap-1">
+                {langs.map(l => (
+                  <button key={l} onClick={() => setLang(l)}
+                    className={`text-[10px] px-1.5 py-0.5 rounded font-medium ${lang === l ? 'bg-white/20 text-white' : 'text-green-300'}`}>
+                    {l.toUpperCase()}
+                  </button>
+                ))}
+              </div>
+              {!user ? (
+                <Link href="/login"
+                  className="bg-[#f5c842] text-[#166534] font-bold px-3 py-1.5 rounded-xl text-xs hover:bg-yellow-400 transition">
+                  Connexion
+                </Link>
+              ) : (
+                <div className="w-8 h-8 bg-[#f5c842] rounded-full flex items-center justify-center text-[#166534] font-bold text-sm">
+                  {profile?.nom?.charAt(0).toUpperCase() || '?'}
+                </div>
+              )}
+            </div>
+
           </div>
         </div>
-
-        {/* Mobile menu */}
-        {open && (
-          <div className="md:hidden bg-[#0a4a2f] border-t border-green-800 px-4 py-4 space-y-1">
-            <Link href="/" onClick={() => setOpen(false)} className="block text-sm py-2 hover:text-[#f5c842]">{t.nav.home}</Link>
-            <Link href="/recherche" onClick={() => setOpen(false)} className="block text-sm py-2 hover:text-[#f5c842]">{t.nav.search}</Link>
-            <Link href="/forum" onClick={() => setOpen(false)} className="block text-sm py-2 hover:text-[#f5c842]">🌾 Forum</Link>
-            {user && (
-              <>
-                <Link href="/messages" onClick={() => setOpen(false)} className="block text-sm py-2 hover:text-[#f5c842]">{t.nav.messages}</Link>
-                <Link href="/mes-annonces" onClick={() => setOpen(false)} className="block text-sm py-2 hover:text-[#f5c842]">📢 Mes annonces</Link>
-                <Link href="/dashboard" onClick={() => setOpen(false)} className="block text-sm py-2 hover:text-[#f5c842]">{t.nav.dashboard}</Link>
-                <Link href="/vendre" onClick={() => setOpen(false)} className="block text-sm py-2 hover:text-[#f5c842]">{t.nav.sell}</Link>
-                <button onClick={signOut} className="block text-sm py-2 text-red-300">{t.nav.logout}</button>
-              </>
-            )}
-            {!user && (
-              <Link href="/login" onClick={() => setOpen(false)} className="block text-sm py-2 hover:text-[#f5c842]">{t.nav.login}</Link>
-            )}
-            <div className="flex gap-2 pt-2">
-              {langs.map(l => (
-                <button
-                  key={l}
-                  onClick={() => setLang(l)}
-                  className={`text-xs px-2 py-1 rounded ${lang === l ? 'bg-white/20' : 'text-green-300'}`}
-                >
-                  {langLabels[l]}
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
       </nav>
     </>
   )

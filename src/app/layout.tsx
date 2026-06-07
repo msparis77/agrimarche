@@ -4,6 +4,7 @@ import './globals.css'
 import { AuthProvider } from '@/hooks/useAuth'
 import { LangProvider } from '@/hooks/useLang'
 import Navbar from '@/components/layout/Navbar'
+import BottomNav from '@/components/layout/BottomNav'
 import WhatsAppButton from '@/components/WhatsAppButton'
 
 const inter = Inter({ subsets: ['latin'] })
@@ -25,8 +26,9 @@ export default function RootLayout({
         <AuthProvider>
           <LangProvider>
             <Navbar />
-            <main>{children}</main>
+            <main className="pb-20 md:pb-0">{children}</main>
             <WhatsAppButton />
+            <BottomNav />
           </LangProvider>
         </AuthProvider>
       </body>

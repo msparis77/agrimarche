@@ -554,31 +554,37 @@ export default function ForumPage() {
             <button
               key={post.id}
               onClick={() => openPost(post)}
-              className="w-full bg-white rounded-xl p-4 shadow-sm border border-gray-100 hover:border-[#0a4a2f] hover:shadow-md transition-all text-left"
+              className="w-full bg-white rounded-2xl p-4 shadow-sm border border-gray-100 hover:border-[#166534] hover:shadow-md transition-all text-left active:scale-[0.99]"
             >
-              <div className="flex items-start justify-between gap-3">
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 mb-1.5">
-                    <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${getCatStyle(post.categorie)}`}>
-                      {getCatLabel(post.categorie)}
-                    </span>
-                  </div>
-                  <h3 className="font-semibold text-gray-900 truncate">{post.titre}</h3>
-                  <p className="text-sm text-gray-500 mt-0.5 line-clamp-1">{post.contenu}</p>
+              <div className="flex items-start gap-3">
+                <div className="w-10 h-10 bg-[#166534]/10 rounded-xl flex items-center justify-center flex-shrink-0 text-lg">
+                  {getCatLabel(post.categorie).split(' ')[0]}
                 </div>
-                <ChevronRight size={18} className="text-gray-300 flex-shrink-0 mt-1" />
-              </div>
-              <div className="flex items-center justify-between mt-3 pt-2 border-t border-gray-50">
-                <div className="flex items-center gap-2">
-                  <div className="w-6 h-6 bg-[#0a4a2f] rounded-full flex items-center justify-center text-white text-xs font-bold">
-                    {post.profiles?.nom?.charAt(0).toUpperCase() || '?'}
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-start justify-between gap-2 mb-1">
+                    <span className={`text-xs px-2 py-0.5 rounded-full font-semibold ${getCatStyle(post.categorie)}`}>
+                      {getCatLabel(post.categorie).split(' ').slice(1).join(' ')}
+                    </span>
+                    <span className="text-xs text-gray-400 flex-shrink-0">{timeAgo(post.created_at)}</span>
                   </div>
-                  <span className="text-xs text-gray-500">{post.profiles?.nom || 'Membre'} · {post.profiles?.pays}</span>
+                  <h3 className="font-bold text-gray-900 text-sm leading-snug mb-1">{post.titre}</h3>
+                  <p className="text-xs text-gray-500 line-clamp-2 leading-relaxed">{post.contenu}</p>
+                </div>
+              </div>
+              <div className="flex items-center justify-between mt-3 pt-3 border-t border-gray-50">
+                <div className="flex items-center gap-2">
+                  <div className="w-6 h-6 bg-[#166534] rounded-full flex items-center justify-center text-white text-xs font-bold">
+                    {post.profiles?.nom?.charAt(0).toUpperCase() || 'M'}
+                  </div>
+                  <span className="text-xs text-gray-500 font-medium">{post.profiles?.nom || 'Membre'}</span>
                 </div>
                 <div className="flex items-center gap-3 text-xs text-gray-400">
-                  <span className="flex items-center gap-1"><MessageSquare size={11} /> {(post.forum_comments as any)?.[0]?.count || 0}</span>
-                  <span className="flex items-center gap-1"><Eye size={11} /> {post.vues}</span>
-                  <span>{timeAgo(post.created_at)}</span>
+                  <span className="flex items-center gap-1 bg-gray-50 px-2 py-1 rounded-full">
+                    <MessageSquare size={10} /> {(post.forum_comments as any)?.[0]?.count || 0}
+                  </span>
+                  <span className="flex items-center gap-1 bg-gray-50 px-2 py-1 rounded-full">
+                    <Eye size={10} /> {post.vues}
+                  </span>
                 </div>
               </div>
             </button>
