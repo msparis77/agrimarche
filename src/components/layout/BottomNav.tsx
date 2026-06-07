@@ -23,23 +23,10 @@ export default function BottomNav() {
     <nav className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-white border-t border-gray-100"
       style={{ boxShadow: '0 -4px 24px rgba(0,0,0,0.08)', paddingBottom: 'env(safe-area-inset-bottom)' }}>
       <div className="flex items-center justify-around h-16 px-2">
-        {tabs.map(({ href, icon: Icon, label, center, protected: isProtected, badge }) => {
+        {tabs.map(({ href, icon: Icon, label, protected: isProtected, badge }) => {
           const isActive = pathname === href || (href !== '/' && pathname.startsWith(href))
           const targetHref = isProtected && !user ? '/login' : href
           const showBadge = badge && user && unread > 0
-
-          if (center) {
-            return (
-              <Link key={href} href={user ? href : '/login'}
-                className="flex flex-col items-center justify-center -mt-5">
-                <div className="w-14 h-14 rounded-full flex items-center justify-center shadow-lg transition-transform active:scale-95 bg-[#166534]"
-                  style={{ boxShadow: '0 4px 16px rgba(22,101,52,0.4)' }}>
-                  <Icon size={26} className="text-white" strokeWidth={2.5} />
-                </div>
-                <span className="text-[10px] font-semibold text-[#166534] mt-1">{label}</span>
-              </Link>
-            )
-          }
 
           return (
             <Link key={href} href={targetHref}
