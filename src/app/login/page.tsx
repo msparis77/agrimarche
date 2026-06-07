@@ -1,14 +1,16 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, Suspense } from 'react'
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import { useLang } from '@/hooks/useLang'
 
-export default function LoginPage() {
+function LoginForm() {
   const { t } = useLang()
   const router = useRouter()
+  const searchParams = useSearchParams()
+  const next = searchParams.get('next') || '/'
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
@@ -27,7 +29,7 @@ export default function LoginPage() {
     if (error) {
       setError('Email ou mot de passe incorrect.')
     } else {
-      router.push('/')
+      router.push(next)
     }
     setLoading(false)
   }
@@ -176,5 +178,13 @@ export default function LoginPage() {
         )}
       </div>
     </div>
+  )
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-gradient-to-br from-green-50 to-yellow-50 flex items-center justify-center"><span className="text-green-800">Chargement...</span></div>}>
+      <LoginForm />
+    </Suspense>
   )
 }

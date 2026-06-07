@@ -150,7 +150,7 @@ function KpiCard({ icon, label, value, sub, color }: {
 }
 
 export default function AdminPage() {
-  const { user, profile } = useAuth()
+  const { user, profile, loading: authLoading } = useAuth()
   const router = useRouter()
   const [unlocked, setUnlocked] = useState(false)
   const [section, setSection] = useState<Section>('overview')
@@ -180,10 +180,11 @@ export default function AdminPage() {
   const [noteAdmin, setNoteAdmin] = useState('')
 
   useEffect(() => {
+    if (!user && !authLoading) { router.push('/login?next=/admin'); return }
     if (!profile) return
-    if (profile.role !== 'admin') { router.push('/login'); return }
+    if (profile.role !== 'admin') { router.push('/login?next=/admin'); return }
     fetchAll()
-  }, [profile])
+  }, [profile, user, authLoading])
 
   const fetchAll = async () => {
     setRefreshing(true)
@@ -305,7 +306,14 @@ export default function AdminPage() {
     { id: 'alerts',    icon: <AlertTriangle size={18} />,   label: 'Alertes',           badge: pendingVerifs.length + newUsersToday.length },
   ]
 
-  if (!profile) return null
+  if (loading || !profile) return (
+    <div className="min-h-screen bg-[#0a4a2f] flex items-center justify-center">
+      <div className="text-center text-white">
+        <RefreshCw size={32} className="animate-spin mx-auto mb-3 text-green-300" />
+        <p className="text-green-300 text-sm">Chargement...</p>
+      </div>
+    </div>
+  )
   if (profile.role !== 'admin') return (
     <div className="min-h-screen bg-[#0a4a2f] flex items-center justify-center">
       <div className="bg-white rounded-3xl p-8 text-center max-w-sm">
