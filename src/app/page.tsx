@@ -2,20 +2,23 @@
 
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
-import { ChevronRight, Package, TrendingUp } from 'lucide-react'
-import { getProducts, Product } from '@/lib/supabase'
-import ProductCard from '@/components/marketplace/ProductCard'
-import { supabase } from '@/lib/supabase'
+import { ChevronRight, Package, TrendingUp, MapPin } from 'lucide-react'
+import { supabase, formatPrice } from '@/lib/supabase'
 
 export default function HomePage() {
-  const [products, setProducts] = useState<Product[]>([])
+  const [products, setProducts] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [prix, setPrix] = useState<any[]>([])
   const [meteo, setMeteo] = useState<any>(null)
   const [ville, setVille] = useState('Dakar')
 
   useEffect(() => {
-    getProducts({ limit: 3 }).then(({ data }) => { setProducts(data || []); setLoading(false) })
+    supabase
+      .from('products')
+      .select('*, profiles(nom, verifie), categories(nom_fr, icone)')
+      .order('created_at', { ascending: false })
+      .limit(3)
+      .then(({ data }) => { setProducts(data || []); setLoading(false) })
     supabase.from('prix_marche').select('*').order('created_at', { ascending: false }).limit(30)
       .then(({ data }) => { if (data) setPrix(data) })
     loadMeteo()
@@ -103,7 +106,7 @@ export default function HomePage() {
         <section>
           <div className="flex items-center justify-between mb-3">
             <h2 className="text-lg font-extrabold text-gray-900">Annonces récentes</h2>
-            <Link href="/recherche" className="flex items-center gap-1 text-[#166534] text-sm font-semibold">
+            <Link href="/annonces" className="flex items-center gap-1 text-white text-sm font-semibold">
               Voir tout <ChevronRight size={15} />
             </Link>
           </div>
@@ -116,18 +119,37 @@ export default function HomePage() {
             </div>
           ) : products.length > 0 ? (
             <div className="space-y-3">
-              {products.slice(0, 3).map(p => <ProductCard key={p.id} product={p} />)}
-              <Link href="/recherche"
-                className="flex items-center justify-center gap-2 w-full py-3.5 border-2 border-[#166534] text-[#166534] font-bold rounded-2xl text-sm hover:bg-green-50 transition active:scale-95">
+              {products.map(p => (
+                <Link key={p.id} href={`/annonces/${p.id}`}
+                  className="flex items-center gap-3 bg-white rounded-2xl p-3 shadow-sm border border-gray-100 hover:shadow-md transition active:scale-[0.99]">
+                  <div className="w-16 h-16 rounded-xl overflow-hidden bg-gradient-to-br from-green-50 to-yellow-50 flex-shrink-0 flex items-center justify-center text-2xl">
+                    {p.images?.[0]
+                      ? <img src={p.images[0]} alt={p.titre} className="w-full h-full object-cover" />
+                      : (p.categories?.icone || '🌾')}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="font-semibold text-gray-900 text-sm truncate">{p.titre}</p>
+                    <p className="font-bold text-[#166534] text-sm mt-0.5">
+                      {formatPrice(p.prix, p.devise)}<span className="text-xs font-normal text-gray-400"> /{p.unite}</span>
+                    </p>
+                    <p className="flex items-center gap-1 text-xs text-gray-400 mt-0.5">
+                      <MapPin size={10} />{p.ville || p.pays || '—'}
+                    </p>
+                  </div>
+                  <ChevronRight size={16} className="text-gray-300 flex-shrink-0" />
+                </Link>
+              ))}
+              <Link href="/annonces"
+                className="flex items-center justify-center gap-2 w-full py-3.5 bg-white/10 border border-white/30 text-white font-bold rounded-2xl text-sm hover:bg-white/20 transition active:scale-95">
                 Voir toutes les annonces <ChevronRight size={16} />
               </Link>
             </div>
           ) : (
-            <div className="text-center py-12 bg-white rounded-2xl border border-gray-100">
-              <Package size={36} className="mx-auto mb-3 text-gray-200" />
-              <p className="text-sm font-medium text-gray-400 mb-4">Aucune annonce pour l'instant</p>
+            <div className="text-center py-10 bg-white/10 rounded-2xl">
+              <Package size={32} className="mx-auto mb-3 text-white/40" />
+              <p className="text-sm font-medium text-white/70 mb-4">Aucune annonce pour l'instant</p>
               <Link href="/vendre"
-                className="inline-flex items-center gap-2 bg-[#166534] text-white px-5 py-2.5 rounded-xl text-sm font-semibold hover:bg-green-800 transition">
+                className="inline-flex items-center gap-2 bg-white text-[#166534] px-5 py-2.5 rounded-xl text-sm font-bold hover:bg-gray-100 transition">
                 ➕ Publier la première
               </Link>
             </div>

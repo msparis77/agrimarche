@@ -25,11 +25,10 @@ export default function AnnoncesPage() {
     let q = supabase
       .from('products')
       .select('*, profiles(nom, verifie), categories(nom_fr, icone)')
-      .eq('disponible', true)
       .order('created_at', { ascending: false })
       .limit(60)
     if (selectedCat) q = q.eq('categorie_id', selectedCat)
-    const { data } = await q
+    const { data, error } = await q
     setProducts(data || [])
     setLoading(false)
   }
