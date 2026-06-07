@@ -4,6 +4,7 @@ import { useState, useEffect, useRef, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { Send, Shield, ArrowLeft, Image as ImageIcon, Search, Plus, X, Check, CheckCheck } from 'lucide-react'
+import MicButton from '@/components/MicButton'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/hooks/useAuth'
 
@@ -522,6 +523,10 @@ function MessagesContent() {
                     onKeyDown={e => e.key === 'Enter' && !e.shiftKey && sendMessage()}
                     placeholder={`Message à ${selectedUser.nom}...`}
                     className="flex-1 bg-gray-100 border-0 rounded-2xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#166534]/30 min-w-0 h-9"
+                  />
+                  <MicButton
+                    onResult={text => setNewMessage(prev => prev ? prev + ' ' + text : text)}
+                    className="w-9 h-9 rounded-full bg-gray-100 hover:bg-gray-200"
                   />
                   <button onClick={() => sendMessage()} disabled={sending || !newMessage.trim()}
                     className="bg-[#166534] text-white w-9 h-9 rounded-full hover:bg-green-800 transition disabled:opacity-40 flex-shrink-0 flex items-center justify-center active:scale-95">

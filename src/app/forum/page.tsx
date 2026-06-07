@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { MessageSquare, Plus, Eye, ChevronRight, ArrowLeft, Send, X, ImagePlus, Loader2 } from 'lucide-react'
+import MicButton from '@/components/MicButton'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/hooks/useAuth'
 
@@ -376,6 +377,10 @@ export default function ForumPage() {
               rows={2}
               className="flex-1 border border-gray-200 rounded-xl px-3 py-2 text-sm resize-none outline-none focus:border-[#0a4a2f] transition"
             />
+            <MicButton
+              onResult={text => setAiInput(prev => prev ? prev + ' ' + text : text)}
+              className="p-2.5 rounded-xl bg-gray-100 hover:bg-gray-200"
+            />
             <button
               onClick={sendToAI}
               disabled={aiLoading || (!aiInput.trim() && !imageBase64)}
@@ -466,6 +471,10 @@ export default function ForumPage() {
                 placeholder="Votre réponse..."
                 rows={2}
                 className="flex-1 border border-gray-200 rounded-xl px-3 py-2 text-sm resize-none outline-none focus:border-[#0a4a2f] transition"
+              />
+              <MicButton
+                onResult={text => setNewComment(prev => prev ? prev + ' ' + text : text)}
+                className="p-2.5 rounded-xl bg-gray-100 hover:bg-gray-200"
               />
               <button
                 onClick={submitComment}
@@ -621,23 +630,35 @@ export default function ForumPage() {
               </div>
               <div>
                 <label className="text-sm font-medium text-gray-700 block mb-1">Titre</label>
-                <input
-                  type="text"
-                  value={titre}
-                  onChange={e => setTitre(e.target.value)}
-                  placeholder="Ex: Prix du mil à Dakar cette semaine ?"
-                  className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm outline-none focus:border-[#0a4a2f] transition"
-                />
+                <div className="relative">
+                  <input
+                    type="text"
+                    value={titre}
+                    onChange={e => setTitre(e.target.value)}
+                    placeholder="Ex: Prix du mil à Dakar cette semaine ?"
+                    className="w-full border border-gray-200 rounded-xl px-3 py-2.5 pr-10 text-sm outline-none focus:border-[#0a4a2f] transition"
+                  />
+                  <MicButton
+                    onResult={text => setTitre(prev => prev ? prev + ' ' + text : text)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2"
+                  />
+                </div>
               </div>
               <div>
                 <label className="text-sm font-medium text-gray-700 block mb-1">Message</label>
-                <textarea
-                  value={contenu}
-                  onChange={e => setContenu(e.target.value)}
-                  placeholder="Décrivez votre sujet..."
-                  rows={4}
-                  className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm resize-none outline-none focus:border-[#0a4a2f] transition"
-                />
+                <div className="relative">
+                  <textarea
+                    value={contenu}
+                    onChange={e => setContenu(e.target.value)}
+                    placeholder="Décrivez votre sujet..."
+                    rows={4}
+                    className="w-full border border-gray-200 rounded-xl px-3 py-2.5 pr-10 text-sm resize-none outline-none focus:border-[#0a4a2f] transition"
+                  />
+                  <MicButton
+                    onResult={text => setContenu(prev => prev ? prev + ' ' + text : text)}
+                    className="absolute right-3 top-3"
+                  />
+                </div>
               </div>
               {postError && (
                 <div className="bg-red-50 border border-red-200 rounded-xl px-3 py-2 text-sm text-red-700">

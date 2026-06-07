@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { Upload, X, ChevronLeft } from 'lucide-react'
+import MicButton from '@/components/MicButton'
 import { supabase, getCategories, Category } from '@/lib/supabase'
 import { useAuth } from '@/hooks/useAuth'
 
@@ -221,27 +222,39 @@ export default function PublierPage() {
         {/* Titre */}
         <div>
           <label className="block text-sm font-semibold text-gray-700 mb-1.5">Titre de l'annonce *</label>
-          <input
-            required
-            value={form.titre}
-            onChange={e => setForm({ ...form, titre: e.target.value })}
-            placeholder={intent === 'offre'
-              ? 'Ex : 500 kg de riz paddy disponible à Dakar'
-              : 'Ex : Recherche 2 tonnes de maïs au Sénégal'}
-            className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-[#166534] focus:ring-1 focus:ring-[#166534]/20 transition"
-          />
+          <div className="relative">
+            <input
+              required
+              value={form.titre}
+              onChange={e => setForm({ ...form, titre: e.target.value })}
+              placeholder={intent === 'offre'
+                ? 'Ex : 500 kg de riz paddy disponible à Dakar'
+                : 'Ex : Recherche 2 tonnes de maïs au Sénégal'}
+              className="w-full border border-gray-200 rounded-xl px-4 py-3 pr-11 text-sm focus:outline-none focus:border-[#166534] focus:ring-1 focus:ring-[#166534]/20 transition"
+            />
+            <MicButton
+              onResult={text => setForm(f => ({ ...f, titre: f.titre ? f.titre + ' ' + text : text }))}
+              className="absolute right-3 top-1/2 -translate-y-1/2"
+            />
+          </div>
         </div>
 
         {/* Description */}
         <div>
           <label className="block text-sm font-semibold text-gray-700 mb-1.5">Description</label>
-          <textarea
-            value={form.description}
-            onChange={e => setForm({ ...form, description: e.target.value })}
-            placeholder="Détails, qualité, conditions, disponibilité..."
-            rows={3}
-            className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-[#166534] resize-none transition"
-          />
+          <div className="relative">
+            <textarea
+              value={form.description}
+              onChange={e => setForm({ ...form, description: e.target.value })}
+              placeholder="Détails, qualité, conditions, disponibilité..."
+              rows={3}
+              className="w-full border border-gray-200 rounded-xl px-4 py-3 pr-11 text-sm focus:outline-none focus:border-[#166534] resize-none transition"
+            />
+            <MicButton
+              onResult={text => setForm(f => ({ ...f, description: f.description ? f.description + ' ' + text : text }))}
+              className="absolute right-3 top-3"
+            />
+          </div>
         </div>
 
         {/* Prix + Unité */}
