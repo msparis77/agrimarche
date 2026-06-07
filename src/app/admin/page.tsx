@@ -100,7 +100,7 @@ export default function AdminPage() {
         .from('profiles')
         .select('role')
         .eq('id', session.user.id)
-        .single()
+        .maybeSingle()
       if (profileError) throw new Error(`Profil: ${profileError.message}`)
       if (!profile || profile.role !== 'admin') { setStatus('notadmin'); return }
 
