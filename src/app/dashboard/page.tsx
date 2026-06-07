@@ -213,7 +213,7 @@ export default function DashboardPage() {
             <div className="text-center py-16 text-gray-500">
               <span className="text-5xl block mb-4">🛒</span>
               <p className="font-medium">Aucune commande pour l'instant</p>
-              <Link href="/recherche" className="mt-4 inline-block bg-[#0a4a2f] text-white px-5 py-2 rounded-xl text-sm">Parcourir les produits</Link>
+              <Link href="/annonces" className="mt-4 inline-block bg-[#0a4a2f] text-white px-5 py-2 rounded-xl text-sm">Parcourir les produits</Link>
             </div>
           ) : (
             <div className="space-y-3">

@@ -45,7 +45,7 @@ export default function Navbar() {
           {/* Desktop nav */}
           <div className="hidden md:flex items-center gap-5">
             <Link href="/" className="text-sm font-medium text-gray-600 hover:text-[#166534] transition">{t.nav.home}</Link>
-            <Link href="/recherche" className="text-sm font-medium text-gray-600 hover:text-[#166534] transition">{t.nav.search}</Link>
+            <Link href="/annonces" className="text-sm font-medium text-gray-600 hover:text-[#166534] transition">{t.nav.search}</Link>
             <Link href="/forum" className="text-sm font-medium text-gray-600 hover:text-[#166534] transition">Forum</Link>
             {user && (
               <>
@@ -110,7 +110,7 @@ export default function Navbar() {
 
               {[
                 { href: '/', label: '🏠 Accueil' },
-                { href: '/recherche', label: '🔍 Rechercher' },
+                { href: '/annonces', label: '📋 Annonces' },
                 { href: '/forum', label: '🌾 Forum' },
                 ...(user ? [
                   { href: '/messages', label: '💬 Messages' },

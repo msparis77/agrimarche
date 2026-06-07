@@ -2,7 +2,7 @@ export const translations = {
   fr: {
     nav: {
       home: "Accueil",
-      search: "Rechercher",
+      search: "Annonces",
       sell: "Publier",
       messages: "Messages",
       dashboard: "Tableau de bord",
@@ -119,7 +119,7 @@ export const translations = {
   en: {
     nav: {
       home: "Home",
-      search: "Search",
+      search: "Listings",
       sell: "Publish",
       messages: "Messages",
       dashboard: "Dashboard",

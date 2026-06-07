@@ -337,7 +337,7 @@ function MessagesContent() {
                 <div className="text-4xl mb-3">💬</div>
                 <p className="font-semibold text-gray-600 text-sm mb-1">Aucune conversation</p>
                 <p className="text-xs text-gray-400 mb-5">Contactez un vendeur depuis une annonce ou cherchez un membre</p>
-                <Link href="/recherche"
+                <Link href="/annonces"
                   className="inline-flex items-center gap-1.5 bg-gray-100 text-gray-700 text-xs px-3 py-2 rounded-xl hover:bg-gray-200 transition font-medium">
                   <Search size={11} /> Voir les annonces
                 </Link>
@@ -549,7 +549,7 @@ function MessagesContent() {
                     className="inline-flex items-center gap-2 bg-[#166534] text-white text-sm px-6 py-2.5 rounded-xl hover:bg-green-800 transition font-medium">
                     <Search size={14} /> Chercher un membre
                   </button>
-                  <Link href="/recherche" className="text-xs text-gray-400 hover:text-[#166534] transition underline">
+                  <Link href="/annonces" className="text-xs text-gray-400 hover:text-[#166534] transition underline">
                     ou parcourir les annonces
                   </Link>
                 </div>
