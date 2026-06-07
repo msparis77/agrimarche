@@ -63,7 +63,7 @@ export default function HomePage() {
     : ['🌾 Riz · 450 FCFA/kg', '🌽 Maïs · 280 FCFA/kg', '🥜 Arachide · 320 FCFA/kg', '🧅 Oignon · 200 FCFA/kg', '🍅 Tomate · 350 FCFA/kg']
 
   return (
-    <div className="min-h-screen bg-[#f8faf8]">
+    <div className="min-h-screen bg-[#166534]">
 
       {/* TICKER */}
       <div className="bg-[#166534] overflow-hidden">
