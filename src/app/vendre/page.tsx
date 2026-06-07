@@ -211,7 +211,7 @@ export default function PublierPage() {
           <ChevronLeft size={20} className="text-gray-700" />
         </button>
         <div>
-          <p className="text-xs text-gray-400">Publier une annonce</p>
+          <p className="text-xs text-gray-400">Nouvelle annonce</p>
           <h1 className="font-extrabold text-gray-900 text-lg leading-tight">
             {typeInfo?.emoji} {typeInfo?.label}
           </h1>
