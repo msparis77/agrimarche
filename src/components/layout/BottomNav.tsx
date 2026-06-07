@@ -8,7 +8,7 @@ import { useUnreadMessages } from '@/hooks/useUnreadMessages'
 
 const tabs = [
   { href: '/', icon: Home, label: 'Accueil' },
-  { href: '/recherche', icon: Search, label: 'Chercher' },
+  { href: '/annonces', icon: Search, label: 'Annonces' },
   { href: '/vendre', icon: Plus, label: 'Vendre', center: true },
   { href: '/messages', icon: MessageSquare, label: 'Messages', protected: true, badge: true },
   { href: '/dashboard', icon: User, label: 'Profil', protected: true },
