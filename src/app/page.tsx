@@ -19,7 +19,7 @@ export default function HomePage() {
       .order('created_at', { ascending: false })
       .limit(3)
       .then(({ data }) => { setProducts(data || []); setLoading(false) })
-    supabase.from('prix_marche').select('*').order('created_at', { ascending: false }).limit(30)
+    supabase.from('prix_marche').select('*').order('created_at', { ascending: false }).limit(100)
       .then(({ data }) => { if (data) setPrix(data) })
     loadMeteo()
   }, [])

@@ -195,25 +195,30 @@ export default function AdminPage() {
     URL.revokeObjectURL(url)
   }
 
-  const triggerCron = async () => {
+  const triggerCron = async (force = false) => {
     try {
-      // Récupérer le token de session pour l'authentifier côté serveur
       const { data: { session } } = await supabase.auth.getSession()
       if (!session?.access_token) { alert('❌ Session expirée, reconnecte-toi'); return }
 
       const res = await fetch('/api/admin/insert-prices', {
         method: 'POST',
-        headers: { 'Authorization': `Bearer ${session.access_token}` },
+        headers: {
+          'Authorization': `Bearer ${session.access_token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ force }),
       })
       const json = await res.json()
       if (!res.ok || json.ok === false) {
         alert(`❌ Erreur :\n${json.error || JSON.stringify(json)}`)
         return
       }
-      const msg = json.message
-        ? `ℹ️ ${json.message}`
-        : `✅ ${json.inserted} prix insérés\n📅 ${json.date}\n📦 ${json.source}`
-      alert(msg)
+      if (json.message) {
+        const forceAgain = window.confirm(`ℹ️ ${json.message}\n\nCliquer OK pour forcer la réinsertion.`)
+        if (forceAgain) { await triggerCron(true); return }
+      } else {
+        alert(`✅ ${json.inserted} prix insérés\n📅 ${json.date}\n📦 ${json.source}`)
+      }
       await loadStats()
     } catch (err: any) {
       alert(`❌ Erreur : ${err.message}`)
@@ -450,7 +455,7 @@ function PrixSection({ prix, exportCSV, triggerCron, prixFiltreProduit, setPrixF
           <p className="text-sm text-gray-500 mt-0.5">Données privées — Rapport ONG/Gouvernements</p>
         </div>
         <div className="flex gap-2">
-          <button onClick={triggerCron}
+          <button onClick={() => triggerCron()}
             className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-xl text-sm font-semibold flex items-center gap-2 transition">
             🔄 Déclencher mise à jour FAO
           </button>

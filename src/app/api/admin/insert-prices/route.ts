@@ -66,6 +66,8 @@ export async function POST(req: NextRequest) {
   )
 
   const aujourd_hui = new Date().toISOString().split('T')[0]
+  const body = await req.json().catch(() => ({}))
+  const force = body?.force === true
 
   // Anti-doublon : déjà inséré cette semaine ?
   const debutSemaine = new Date(Date.now() - 7 * 86400000).toISOString()
@@ -75,11 +77,11 @@ export async function POST(req: NextRequest) {
     .eq('source', 'FAO')
     .gte('created_at', debutSemaine)
 
-  if ((existing ?? 0) > 0) {
+  if (!force && (existing ?? 0) > 0) {
     return NextResponse.json({
       ok: true,
       inserted: 0,
-      message: `Données déjà à jour cette semaine (${existing} entrées FAO existantes)`,
+      message: `Données déjà à jour cette semaine (${existing} entrées FAO). Utiliser force=true pour réinsérer.`,
     })
   }
 
