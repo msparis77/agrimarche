@@ -182,25 +182,19 @@ export async function POST(req: NextRequest) {
   const supabase = createClient(supabaseUrl, supabaseKey)
 
   const aujourd_hui = new Date().toISOString().split('T')[0]
-  const body = await req.json().catch(() => ({}))
-  const force = body?.force === true
-
-  // Anti-doublon : déjà inséré cette semaine ?
-  const debutSemaine = new Date(Date.now() - 7 * 86400000).toISOString()
-  const { count: existing } = await supabase
-    .from('prix_marche')
-    .select('*', { count: 'exact', head: true })
-    .eq('source', 'FAO')
-    .gte('created_at', debutSemaine)
-
-  if (!force && (existing ?? 0) > 0) {
-    return NextResponse.json({
-      ok: true, inserted: 0,
-      message: `Données déjà à jour cette semaine (${existing} entrées FAO). Cliquer OK pour forcer.`,
-    })
-  }
-
   const logs: string[] = []
+
+  // Supprimer toutes les anciennes lignes FAO avant d'insérer
+  const { error: deleteError, count: deleted } = await supabase
+    .from('prix_marche')
+    .delete({ count: 'exact' })
+    .eq('source', 'FAO')
+
+  if (deleteError) {
+    logs.push(`Avertissement suppression : ${deleteError.message}`)
+  } else {
+    logs.push(`${deleted ?? 0} anciennes lignes FAO supprimées`)
+  }
 
   // Tenter l'API OCHA HDX CKAN (données réelles fraîches)
   const liveRows = await fetchOCHAPrices(logs)

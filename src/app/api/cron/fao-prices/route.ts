@@ -180,13 +180,16 @@ export async function GET(req: NextRequest) {
   const aujourd_hui = new Date().toISOString().split('T')[0]
   const logs: string[] = []
 
-  const debutSemaine = new Date(Date.now() - 7 * 86400000).toISOString()
-  const { count: existing } = await supabase
-    .from('prix_marche').select('*', { count: 'exact', head: true })
-    .eq('source', 'FAO').gte('created_at', debutSemaine)
+  // Supprimer les anciennes lignes FAO avant d'insérer les nouvelles
+  const { error: deleteError, count: deleted } = await supabase
+    .from('prix_marche')
+    .delete({ count: 'exact' })
+    .eq('source', 'FAO')
 
-  if ((existing ?? 0) > 0) {
-    return NextResponse.json({ ok: true, inserted: 0, message: `Déjà ${existing} entrées FAO cette semaine` })
+  if (deleteError) {
+    logs.push(`Avertissement suppression : ${deleteError.message}`)
+  } else {
+    logs.push(`${deleted ?? 0} anciennes lignes FAO supprimées`)
   }
 
   const liveRows = await tryFetchLiveData(logs)
