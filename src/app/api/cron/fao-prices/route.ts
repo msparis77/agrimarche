@@ -1,46 +1,57 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 
-// Prix de référence WFP réels — source : OCHA HDX / WFP Food Prices Senegal (mars 2026)
-// Mis à jour à la main chaque trimestre depuis : data.humdata.org/dataset/wfp-food-prices-for-senegal
-const PRIX_WFP_2026 = [
-  // Dakar
-  { produit: 'Riz',      prix: 480, ville: 'Dakar (Tilène)',     admin1: 'Dakar' },
-  { produit: 'Mil',      prix: 270, ville: 'Dakar (Tilène)',     admin1: 'Dakar' },
-  { produit: 'Maïs',     prix: 200, ville: 'Dakar (Tilène)',     admin1: 'Dakar' },
-  { produit: 'Sorgho',   prix: 240, ville: 'Dakar (Tilène)',     admin1: 'Dakar' },
-  { produit: 'Arachide', prix: 950, ville: 'Dakar (Tilène)',     admin1: 'Dakar' },
-  { produit: 'Niébé',    prix: 980, ville: 'Dakar (Tilène)',     admin1: 'Dakar' },
-  // Thiès
-  { produit: 'Riz',      prix: 460, ville: 'Thiès',             admin1: 'Thiès' },
-  { produit: 'Mil',      prix: 255, ville: 'Thiès',             admin1: 'Thiès' },
-  { produit: 'Maïs',     prix: 190, ville: 'Thiès',             admin1: 'Thiès' },
-  { produit: 'Sorgho',   prix: 230, ville: 'Thiès',             admin1: 'Thiès' },
-  { produit: 'Arachide', prix: 920, ville: 'Thiès',             admin1: 'Thiès' },
-  { produit: 'Niébé',    prix: 950, ville: 'Thiès',             admin1: 'Thiès' },
-  // Kaolack
-  { produit: 'Riz',      prix: 450, ville: 'Kaolack',           admin1: 'Kaolack' },
-  { produit: 'Mil',      prix: 240, ville: 'Kaolack',           admin1: 'Kaolack' },
-  { produit: 'Maïs',     prix: 185, ville: 'Kaolack',           admin1: 'Kaolack' },
-  { produit: 'Sorgho',   prix: 225, ville: 'Kaolack',           admin1: 'Kaolack' },
-  { produit: 'Arachide', prix: 900, ville: 'Kaolack',           admin1: 'Kaolack' },
-  { produit: 'Niébé',    prix: 900, ville: 'Kaolack',           admin1: 'Kaolack' },
-  // Saint-Louis
-  { produit: 'Riz',      prix: 470, ville: 'Saint-Louis',       admin1: 'Saint-Louis' },
-  { produit: 'Mil',      prix: 260, ville: 'Saint-Louis',       admin1: 'Saint-Louis' },
-  { produit: 'Oignon',   prix: 300, ville: 'Saint-Louis',       admin1: 'Saint-Louis' },
-  { produit: 'Tomate',   prix: 450, ville: 'Saint-Louis',       admin1: 'Saint-Louis' },
-  // Ziguinchor (données directes CSV mars 2026)
-  { produit: 'Riz',      prix: 500, ville: 'Ziguinchor (Saint-Maur)', admin1: 'Ziguinchor' },
-  { produit: 'Sorgho',   prix: 400, ville: 'Ziguinchor (Saint-Maur)', admin1: 'Ziguinchor' },
-  { produit: 'Niébé',    prix: 1000, ville: 'Ziguinchor (Saint-Maur)', admin1: 'Ziguinchor' },
-  { produit: 'Arachide', prix: 1000, ville: 'Ziguinchor (Saint-Maur)', admin1: 'Ziguinchor' },
-  // Tambacounda
-  { produit: 'Riz',      prix: 455, ville: 'Tambacounda',       admin1: 'Tambacounda' },
-  { produit: 'Mil',      prix: 250, ville: 'Tambacounda',       admin1: 'Tambacounda' },
-  { produit: 'Sorgho',   prix: 220, ville: 'Tambacounda',       admin1: 'Tambacounda' },
-  { produit: 'Arachide', prix: 880, ville: 'Tambacounda',       admin1: 'Tambacounda' },
-]
+const HDX_CSV = 'https://data.humdata.org/dataset/77b76bc7-1edd-43f6-a5e4-784498ff6aca/resource/04ffc070-6d05-4653-a9f6-9f3f893a229e/download/'
+
+const MAPPING: Record<string, string> = {
+  'maize':          'Maïs',
+  'corn':           'Maïs',
+  'millet':         'Mil',
+  'pearl millet':   'Mil',
+  'sorghum':        'Sorgho',
+  'rice':           'Riz',
+  'wheat':          'Blé',
+  'groundnuts':     'Arachide',
+  'peanuts':        'Arachide',
+  'beans (niebe)':  'Niébé',
+  'cowpeas':        'Niébé',
+  'niebe':          'Niébé',
+  'tomatoes':       'Tomate',
+  'tomato':         'Tomate',
+  'onions':         'Oignon',
+  'onion':          'Oignon',
+  'cassava':        'Manioc',
+  'fonio':          'Fonio',
+}
+
+function mapProduit(name: string): string | null {
+  const lower = name.toLowerCase()
+  for (const [k, fr] of Object.entries(MAPPING)) {
+    if (lower.startsWith(k) || lower.includes(k)) return fr
+  }
+  return null
+}
+
+function parseCsvRows(body: string, header: string[]): Record<string, string>[] {
+  const rows: Record<string, string>[] = []
+  for (const line of body.split('\n')) {
+    if (!line.trim() || !/^\d{4}-\d{2}/.test(line)) continue
+    const cols: string[] = []
+    let cur = '', inQ = false
+    for (const ch of line) {
+      if (ch === '"') inQ = !inQ
+      else if (ch === ',' && !inQ) { cols.push(cur.trim()); cur = '' }
+      else cur += ch
+    }
+    cols.push(cur.trim())
+    if (cols.length >= header.length) {
+      const row: Record<string, string> = {}
+      header.forEach((h, i) => { row[h] = cols[i] ?? '' })
+      rows.push(row)
+    }
+  }
+  return rows
+}
 
 export async function GET(req: NextRequest) {
   const authHeader = req.headers.get('authorization')
@@ -55,50 +66,87 @@ export async function GET(req: NextRequest) {
   )
 
   const aujourd_hui = new Date().toISOString().split('T')[0]
-  // Variation hebdomadaire déterministe ±4% selon numéro de semaine
-  const semaine = Math.floor(Date.now() / (7 * 24 * 3600 * 1000))
-  const variation = (s: number, i: number) => 1 + ((((s * 7 + i * 13) % 17) - 8) / 100) * 0.5
 
-  // Vérifier s'il y a déjà des données FAO cette semaine
-  const debutSemaine = new Date(Date.now() - 7 * 24 * 3600 * 1000).toISOString()
-  const { count: existingCount } = await supabase
+  // Anti-doublon rapide : données FAO déjà insérées cette semaine ?
+  const debutSemaine = new Date(Date.now() - 7 * 86400000).toISOString()
+  const { count: existing } = await supabase
     .from('prix_marche')
     .select('*', { count: 'exact', head: true })
     .eq('source', 'FAO')
     .gte('created_at', debutSemaine)
 
-  if ((existingCount ?? 0) > 0) {
+  if ((existing ?? 0) > 0) {
     return NextResponse.json({
-      ok: true,
-      date: aujourd_hui,
-      inserted: 0,
-      message: `Données déjà à jour cette semaine (${existingCount} entrées existantes)`,
+      ok: true, inserted: 0,
+      message: `Déjà ${existing} entrées FAO cette semaine`,
     })
   }
 
-  // Insérer en une seule opération batch
-  const rows = PRIX_WFP_2026.map((p, i) => ({
-    produit:     p.produit,
-    prix:        Math.round(p.prix * variation(semaine, i)),
-    unite:       'kg',
-    ville:       p.ville,
-    pays:        'Sénégal',
-    source:      'FAO',
-    periode:     aujourd_hui,
-    vendeur:     'WFP/OCHA HDX',
-    description: `${p.produit} — ${p.admin1}, Sénégal (données WFP mars 2026)`,
-  }))
+  try {
+    // ── Requête 1 : en-tête CSV (200 premiers octets) ─────────────────
+    const headRes = await fetch(HDX_CSV, {
+      headers: { 'Range': 'bytes=0-299', 'User-Agent': 'AgriMarche/1.0' },
+      signal: AbortSignal.timeout(10000),
+    })
+    const headerText = await headRes.text()
+    const header = headerText.split('\n')[0].split(',').map(h => h.trim().replace(/"/g, ''))
 
-  const { error, data } = await supabase.from('prix_marche').insert(rows).select('id')
+    // ── Requête 2 : 200 derniers Ko du fichier (données récentes) ────
+    const bodyRes = await fetch(HDX_CSV, {
+      headers: { 'Range': 'bytes=-204800', 'User-Agent': 'AgriMarche/1.0' },
+      signal: AbortSignal.timeout(15000),
+    })
+    const bodyText = await bodyRes.text()
 
-  if (error) {
-    return NextResponse.json({ ok: false, error: error.message }, { status: 500 })
+    // Ignorer la 1ère ligne incomplète (on est au milieu du fichier)
+    const body = bodyText.split('\n').slice(1).join('\n')
+    const allRows = parseCsvRows(body, header)
+
+    // Garder seulement les 4 derniers mois, XOF, Retail
+    const seuil = new Date(); seuil.setMonth(seuil.getMonth() - 4)
+    const filtered = allRows.filter(r =>
+      new Date(r.date) >= seuil &&
+      r.currency === 'XOF' &&
+      r.pricetype === 'Retail' &&
+      parseFloat(r.price) > 0
+    )
+
+    if (!filtered.length) {
+      return NextResponse.json({ ok: true, inserted: 0, message: 'Aucune donnée récente dans le CSV' })
+    }
+
+    // ── Insert batch unique ───────────────────────────────────────────
+    const rows = filtered
+      .map(r => {
+        const produit = mapProduit(r.commodity)
+        const prix = Math.round(parseFloat(r.price))
+        if (!produit || !prix) return null
+        return {
+          produit,
+          prix,
+          unite: r.unit?.toLowerCase() || 'kg',
+          ville: r.market || r.admin2 || r.admin1,
+          pays: 'Sénégal',
+          source: 'FAO',
+          periode: r.date || aujourd_hui,
+          vendeur: 'WFP/OCHA HDX',
+          description: `${r.commodity} — ${r.market}, ${r.admin1}`,
+        }
+      })
+      .filter(Boolean) as object[]
+
+    const { data, error } = await supabase.from('prix_marche').insert(rows).select('id')
+    if (error) throw new Error(error.message)
+
+    return NextResponse.json({
+      ok: true,
+      date: aujourd_hui,
+      source: 'WFP/OCHA HDX — vrais prix Sénégal',
+      inserted: data?.length ?? rows.length,
+      parsed: allRows.length,
+      filtered: filtered.length,
+    })
+  } catch (err: any) {
+    return NextResponse.json({ ok: false, error: err.message }, { status: 500 })
   }
-
-  return NextResponse.json({
-    ok: true,
-    date: aujourd_hui,
-    source: 'WFP/OCHA HDX — données réelles Sénégal 2026',
-    inserted: data?.length ?? rows.length,
-  })
 }
