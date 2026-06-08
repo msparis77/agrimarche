@@ -73,6 +73,7 @@ export default function RegisterPage() {
     capacite_kg: '',
     zones_desservies: [] as string[],
     disponibilite: '',
+    acceptCgv: false,
   })
 
   const getRegions = () => {
@@ -284,6 +285,26 @@ export default function RegisterPage() {
                 />
               </div>
 
+              <label className="flex items-start gap-3 cursor-pointer select-none">
+                <input
+                  type="checkbox"
+                  checked={form.acceptCgv}
+                  onChange={e => setForm({ ...form, acceptCgv: e.target.checked })}
+                  className="mt-0.5 w-4 h-4 accent-[#0a4a2f] flex-shrink-0"
+                />
+                <span className="text-sm text-gray-600">
+                  J'accepte la{' '}
+                  <a href="/confidentialite" target="_blank" className="text-[#0a4a2f] underline font-medium">
+                    politique de confidentialité
+                  </a>{' '}
+                  et les{' '}
+                  <a href="/mentions-legales" target="_blank" className="text-[#0a4a2f] underline font-medium">
+                    mentions légales
+                  </a>{' '}
+                  d'AgriMarché. *
+                </span>
+              </label>
+
               {error && <div className="bg-red-50 text-red-700 text-sm px-4 py-2 rounded-lg">{error}</div>}
 
               <button
@@ -294,6 +315,10 @@ export default function RegisterPage() {
                   }
                   if (form.password.length < 6) {
                     setError('Le mot de passe doit contenir au moins 6 caractères')
+                    return
+                  }
+                  if (!form.acceptCgv) {
+                    setError('Vous devez accepter la politique de confidentialité pour continuer')
                     return
                   }
                   setError('')
