@@ -70,8 +70,8 @@ export default function HomePage() {
   )
 
   const tickerItems = prixParProduit.length > 0
-    ? prixParProduit.map((p: any) => `${getEmojiproduit(p.produit)} ${p.produit} ${p.prix.toLocaleString()} F/${p.unite}${p.source === 'FAO' ? ' ★FAO' : ''}`)
-    : ['🌾 Riz · 450 F/kg', '🌽 Maïs · 280 F/kg', '🥜 Arachide · 320 F/kg', '🧅 Oignon · 200 F/kg', '🍅 Tomate · 350 F/kg']
+    ? prixParProduit.filter((p: any) => p.prix != null).map((p: any) => `${getEmojiproduit(p.produit)} ${p.produit} ${Number(p.prix).toLocaleString('fr-FR')} F/${p.unite || 'kg'}${p.source === 'FAO' ? ' ★FAO' : ''}`)
+    : ['🌾 Riz 450 F/kg', '🌽 Maïs 280 F/kg', '🥜 Arachide 320 F/kg', '🧅 Oignon 200 F/kg', '🍅 Tomate 350 F/kg']
 
   return (
     <div className="min-h-screen bg-[#166534]">
@@ -191,7 +191,7 @@ export default function HomePage() {
                     </div>
                   </div>
                   <div className="text-right">
-                    <p className="font-bold text-[#166534] text-sm">{p.prix.toLocaleString()} <span className="text-xs font-normal text-gray-400">F</span></p>
+                    <p className="font-bold text-[#166534] text-sm">{Number(p.prix).toLocaleString('fr-FR')} <span className="text-xs font-normal text-gray-400">F</span></p>
                     <p className="text-xs text-gray-400">/{p.unite}</p>
                   </div>
                 </div>

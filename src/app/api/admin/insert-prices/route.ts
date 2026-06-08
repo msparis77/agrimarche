@@ -107,12 +107,29 @@ export async function POST(req: NextRequest) {
     .insert(rows)
     .select('id')
 
-  if (error) return NextResponse.json({ ok: false, error: error.message }, { status: 500 })
+  if (error) {
+    return NextResponse.json({
+      ok: false,
+      error: error.message,
+      errorCode: error.code,
+      errorDetails: error.details,
+      keyUsed: process.env.SUPABASE_SERVICE_ROLE_KEY ? 'service_role' : 'anon',
+    }, { status: 500 })
+  }
+
+  const inserted = data?.length ?? rows.length
+  if (inserted === 0 && rows.length > 0) {
+    return NextResponse.json({
+      ok: false,
+      error: `Insert silencieux : 0 lignes confirmées sur ${rows.length} tentées. Vérifier les politiques RLS Supabase.`,
+      keyUsed: process.env.SUPABASE_SERVICE_ROLE_KEY ? 'service_role' : 'anon',
+    }, { status: 500 })
+  }
 
   return NextResponse.json({
     ok: true,
     date: aujourd_hui,
     source: 'WFP/OCHA HDX — données réelles Sénégal 2026',
-    inserted: data?.length ?? rows.length,
+    inserted,
   })
 }
