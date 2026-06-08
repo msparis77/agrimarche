@@ -2,71 +2,19 @@
 
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
-import { createClient } from '@supabase/supabase-js'
+import { supabase } from '@/lib/supabase'
 
-const supabase = createClient(
-  'https://rlnigbyjnlloplqwzxrm.supabase.co',
-  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJsbmlnYnlqbmxsb3BscXd6eHJtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA0MTM1ODEsImV4cCI6MjA5NTk4OTU4MX0.ZVJ0lskiUwo55aEmxpFJ9BWiw4L6giAG_s1kXHh5sA4'
-)
-
-const PRODUITS = [
-  'Riz', 'Mil', 'Maïs', 'Sorgho', 'Arachide',
-  'Niébé', 'Sésame', 'Coton', 'Tomate', 'Oignon',
-  'Manioc', 'Patate douce', 'Igname', 'Banane',
-  'Mangue', 'Anacarde', 'Huile de palme', 'Bétail',
-  'Volaille', 'Poisson', 'Autre'
-]
-
-const VILLES = [
-  'Dakar', 'Thiès', 'Kaolack', 'Ziguinchor', 'Saint-Louis',
-  'Tambacounda', 'Kolda', 'Matam', 'Kaffrine', 'Sédhiou',
-  'Banjul', 'Brikama', 'Kanifing', 'Conakry', 'Labé', 'Autre'
-]
-
-const TYPES_VENDEUR = [
-  '🏪 Grossiste',
-  '🌾 Producteur / Fermier',
-  '🤝 Coopérative',
-  '🏬 Demi-grossiste',
-]
-
+const PRODUITS = ['Riz', 'Mil', 'Maïs', 'Sorgho', 'Arachide', 'Niébé', 'Tomate', 'Oignon', 'Manioc', 'Banane', 'Poisson', 'Volaille', 'Autre']
+const VILLES = ['Dakar', 'Thiès', 'Kaolack', 'Ziguinchor', 'Saint-Louis', 'Tambacounda', 'Kolda', 'Banjul', 'Brikama', 'Conakry', 'Labé', 'Autre']
+const TYPES_VENDEUR = ['🏪 Grossiste', '🌾 Producteur / Fermier', '🤝 Coopérative', '🏬 Demi-grossiste']
 const UNITES = ['kg', 'tonne', 'sac (50kg)', 'sac (100kg)', 'litre', 'unité']
 
+const getEmoji = (p: string) => ({ 'Riz':'🌾','Mil':'🌾','Maïs':'🌽','Sorgho':'🌾','Arachide':'🥜','Oignon':'🧅','Tomate':'🍅','Manioc':'🥔','Banane':'🍌','Poisson':'🐟','Volaille':'🐔' }[p] || '📦')
+
 interface PrixItem {
-  id: string
-  vendeur: string
-  type_vendeur: string
-  telephone: string
-  produit: string
-  prix: number
-  unite: string
-  quantite_dispo: string
-  ville: string
-  description: string
-  created_at: string
-}
-
-interface FormData {
-  vendeur: string
-  type_vendeur: string
-  telephone: string
-  produit: string
-  prix: string
-  unite: string
-  quantite_dispo: string
-  ville: string
-  description: string
-}
-
-const getEmoji = (produit: string): string => {
-  const map: Record<string, string> = {
-    'Riz': '🌾', 'Mil': '🌾', 'Maïs': '🌽', 'Sorgho': '🌾',
-    'Arachide': '🥜', 'Oignon': '🧅', 'Tomate': '🍅',
-    'Manioc': '🥔', 'Banane': '🍌', 'Mangue': '🥭',
-    'Poisson': '🐟', 'Volaille': '🐔', 'Bétail': '🐄',
-    'Coton': '☁️', 'Anacarde': '🥜', 'Huile de palme': '🫙',
-  }
-  return map[produit] || '📦'
+  id: string; vendeur: string; type_vendeur: string; telephone: string
+  produit: string; prix: number; unite: string; quantite_dispo: string
+  ville: string; pays?: string; description: string; source?: string; created_at: string
 }
 
 export default function MarchePage() {
@@ -77,17 +25,11 @@ export default function MarchePage() {
   const [success, setSuccess] = useState(false)
   const [filtreVille, setFiltreVille] = useState('Toutes')
   const [filtreProduit, setFiltreProduit] = useState('Tous')
-
-  const [form, setForm] = useState<FormData>({
-    vendeur: '', type_vendeur: '', telephone: '', produit: '',
-    prix: '', unite: 'kg', quantite_dispo: '', ville: '', description: '',
-  })
+  const [form, setForm] = useState({ vendeur:'', type_vendeur:'', telephone:'', produit:'', prix:'', unite:'kg', quantite_dispo:'', ville:'', description:'' })
 
   const chargerPrix = async () => {
     const { data } = await supabase
-      .from('prix_marche')
-      .select('*')
-      .order('created_at', { ascending: false })
+      .from('prix_marche').select('*').order('created_at', { ascending: false }).limit(200)
     if (data) setPrix(data as PrixItem[])
     setLoading(false)
   }
@@ -101,69 +43,67 @@ export default function MarchePage() {
     }
     setSaving(true)
     const { error } = await supabase.from('prix_marche').insert([{
-      vendeur: form.vendeur,
-      type_vendeur: form.type_vendeur || null,
-      telephone: form.telephone || null,
-      produit: form.produit,
-      prix: parseFloat(form.prix),
-      unite: form.unite,
-      quantite_dispo: form.quantite_dispo || null,
-      ville: form.ville,
-      description: form.description || null,
+      vendeur: form.vendeur, type_vendeur: form.type_vendeur || null,
+      telephone: form.telephone || null, produit: form.produit,
+      prix: parseFloat(form.prix), unite: form.unite,
+      quantite_dispo: form.quantite_dispo || null, ville: form.ville,
+      description: form.description || null, source: 'Terrain',
     }])
     setSaving(false)
     if (!error) {
       setSuccess(true)
-      setForm({ vendeur: '', type_vendeur: '', telephone: '', produit: '', prix: '', unite: 'kg', quantite_dispo: '', ville: '', description: '' })
-      setShowForm(false)
-      chargerPrix()
+      setForm({ vendeur:'', type_vendeur:'', telephone:'', produit:'', prix:'', unite:'kg', quantite_dispo:'', ville:'', description:'' })
+      setShowForm(false); chargerPrix()
       setTimeout(() => setSuccess(false), 4000)
-    } else {
-      alert('Erreur: ' + JSON.stringify(error))
-    }
+    } else { alert('Erreur: ' + JSON.stringify(error)) }
   }
 
-  const prixFiltres = prix.filter((p: PrixItem) => {
-    const okVille = filtreVille === 'Toutes' || p.ville === filtreVille
-    const okProduit = filtreProduit === 'Tous' || p.produit === filtreProduit
-    return okVille && okProduit
-  })
+  // Derniers 5 prix par produit pour l'affichage public
+  const prixParProduit: Record<string, PrixItem[]> = {}
+  for (const p of prix) {
+    if (filtreProduit !== 'Tous' && p.produit !== filtreProduit) continue
+    if (filtreVille !== 'Toutes' && p.ville !== filtreVille) continue
+    if (!prixParProduit[p.produit]) prixParProduit[p.produit] = []
+    if (prixParProduit[p.produit].length < 5) prixParProduit[p.produit].push(p)
+  }
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <nav className="bg-green-800 text-white px-4 py-3 flex items-center justify-between sticky top-0 z-50 shadow-md">
-        <Link href="/" className="flex items-center gap-2">
-          <span className="text-2xl">🌾</span>
-          <span className="font-bold text-lg">AgriMarché</span>
-        </Link>
-        <Link href="/connexion" className="text-sm text-green-200 hover:text-white">Connexion</Link>
-      </nav>
-
-      <div className="max-w-lg mx-auto px-4 py-6">
+      <div className="max-w-2xl mx-auto px-4 py-6">
         <div className="text-center mb-6">
           <h1 className="text-2xl font-bold text-gray-800">📊 Prix du marché</h1>
-          <p className="text-gray-500 text-sm mt-1">Prix en temps réel · Sénégal · Gambie · Guinée</p>
+          <p className="text-gray-500 text-sm mt-1">Sénégal · Gambie · Guinée</p>
+          <div className="flex items-center justify-center gap-4 mt-2 text-xs">
+            <span className="flex items-center gap-1">
+              <span className="bg-blue-100 text-blue-700 font-bold px-2 py-0.5 rounded-full">FAO</span>
+              Prix officiels WFP/FAO
+            </span>
+            <span className="flex items-center gap-1">
+              <span className="bg-green-100 text-green-700 font-bold px-2 py-0.5 rounded-full">Terrain</span>
+              Prix signalés par les acteurs
+            </span>
+          </div>
         </div>
 
         {success && (
           <div className="bg-green-100 border border-green-300 text-green-800 rounded-2xl px-5 py-4 mb-4 text-center font-semibold">
-            ✅ Ton prix a été publié ! Visible par tous les acheteurs.
+            ✅ Ton prix a été publié !
           </div>
         )}
 
         <button onClick={() => setShowForm(!showForm)}
-          className="w-full bg-yellow-400 text-green-900 font-bold py-4 rounded-2xl text-base mb-6 shadow hover:bg-yellow-300 transition active:scale-95">
-          {showForm ? '✕ Annuler' : '📢 Publier mon prix'}
+          className="w-full bg-yellow-400 text-green-900 font-bold py-4 rounded-2xl text-base mb-4 shadow hover:bg-yellow-300 transition">
+          {showForm ? '✕ Annuler' : '📢 Signaler un prix du terrain'}
         </button>
 
         {showForm && (
           <div className="bg-white rounded-2xl shadow-md p-5 mb-6">
-            <h2 className="font-bold text-gray-800 text-lg mb-4">Publier mon prix</h2>
+            <h2 className="font-bold text-gray-800 text-lg mb-4">Signaler un prix</h2>
             <div className="space-y-4">
               <div>
                 <label className="text-xs font-semibold text-gray-500 uppercase mb-1 block">Je suis</label>
                 <div className="grid grid-cols-2 gap-2">
-                  {TYPES_VENDEUR.map((type: string) => (
+                  {TYPES_VENDEUR.map(type => (
                     <button key={type} onClick={() => setForm({...form, type_vendeur: type})}
                       className={`py-2 px-3 rounded-xl text-sm border-2 transition ${form.type_vendeur === type ? 'border-green-600 bg-green-50 font-bold text-green-800' : 'border-gray-200 text-gray-600'}`}>
                       {type}
@@ -175,118 +115,115 @@ export default function MarchePage() {
                 <label className="text-xs font-semibold text-gray-500 uppercase mb-1 block">Ton nom *</label>
                 <input type="text" placeholder="Ex: Mamadou Diallo" value={form.vendeur}
                   onChange={e => setForm({...form, vendeur: e.target.value})}
-                  className="w-full border border-gray-200 rounded-xl px-4 py-3 text-base outline-none focus:border-green-500" />
+                  className="w-full border border-gray-200 rounded-xl px-4 py-3 outline-none focus:border-green-500" />
               </div>
               <div>
-                <label className="text-xs font-semibold text-gray-500 uppercase mb-1 block">Téléphone WhatsApp</label>
-                <input type="tel" placeholder="Ex: +221 77 123 45 67" value={form.telephone}
+                <label className="text-xs font-semibold text-gray-500 uppercase mb-1 block">WhatsApp</label>
+                <input type="tel" placeholder="+221 77 123 45 67" value={form.telephone}
                   onChange={e => setForm({...form, telephone: e.target.value})}
-                  className="w-full border border-gray-200 rounded-xl px-4 py-3 text-base outline-none focus:border-green-500" />
+                  className="w-full border border-gray-200 rounded-xl px-4 py-3 outline-none focus:border-green-500" />
               </div>
               <div>
                 <label className="text-xs font-semibold text-gray-500 uppercase mb-1 block">Produit *</label>
                 <select value={form.produit} onChange={e => setForm({...form, produit: e.target.value})}
-                  className="w-full border border-gray-200 rounded-xl px-4 py-3 text-base outline-none focus:border-green-500 bg-white">
-                  <option value="">Choisir un produit</option>
-                  {PRODUITS.map((p: string) => <option key={p} value={p}>{getEmoji(p)} {p}</option>)}
+                  className="w-full border border-gray-200 rounded-xl px-4 py-3 outline-none focus:border-green-500 bg-white">
+                  <option value="">Choisir</option>
+                  {PRODUITS.map(p => <option key={p} value={p}>{getEmoji(p)} {p}</option>)}
                 </select>
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="text-xs font-semibold text-gray-500 uppercase mb-1 block">Prix (FCFA) *</label>
-                  <input type="number" placeholder="Ex: 450" value={form.prix}
+                  <input type="number" placeholder="450" value={form.prix}
                     onChange={e => setForm({...form, prix: e.target.value})}
-                    className="w-full border border-gray-200 rounded-xl px-4 py-3 text-base outline-none focus:border-green-500" />
+                    className="w-full border border-gray-200 rounded-xl px-4 py-3 outline-none focus:border-green-500" />
                 </div>
                 <div>
                   <label className="text-xs font-semibold text-gray-500 uppercase mb-1 block">Par</label>
                   <select value={form.unite} onChange={e => setForm({...form, unite: e.target.value})}
-                    className="w-full border border-gray-200 rounded-xl px-4 py-3 text-base outline-none focus:border-green-500 bg-white">
-                    {UNITES.map((u: string) => <option key={u} value={u}>{u}</option>)}
+                    className="w-full border border-gray-200 rounded-xl px-4 py-3 outline-none focus:border-green-500 bg-white">
+                    {UNITES.map(u => <option key={u} value={u}>{u}</option>)}
                   </select>
                 </div>
               </div>
               <div>
-                <label className="text-xs font-semibold text-gray-500 uppercase mb-1 block">Quantité disponible</label>
-                <input type="text" placeholder="Ex: 500 kg, 10 tonnes..." value={form.quantite_dispo}
-                  onChange={e => setForm({...form, quantite_dispo: e.target.value})}
-                  className="w-full border border-gray-200 rounded-xl px-4 py-3 text-base outline-none focus:border-green-500" />
-              </div>
-              <div>
                 <label className="text-xs font-semibold text-gray-500 uppercase mb-1 block">Ville *</label>
                 <select value={form.ville} onChange={e => setForm({...form, ville: e.target.value})}
-                  className="w-full border border-gray-200 rounded-xl px-4 py-3 text-base outline-none focus:border-green-500 bg-white">
-                  <option value="">Choisir une ville</option>
-                  {VILLES.map((v: string) => <option key={v} value={v}>{v}</option>)}
+                  className="w-full border border-gray-200 rounded-xl px-4 py-3 outline-none focus:border-green-500 bg-white">
+                  <option value="">Choisir</option>
+                  {VILLES.map(v => <option key={v} value={v}>{v}</option>)}
                 </select>
               </div>
               <button onClick={handleSubmit} disabled={saving}
-                className="w-full bg-green-700 text-white font-bold py-4 rounded-2xl text-base hover:bg-green-600 transition active:scale-95 disabled:opacity-50">
-                {saving ? '⏳ Publication...' : '✅ Publier mon prix'}
+                className="w-full bg-green-700 text-white font-bold py-4 rounded-2xl hover:bg-green-600 transition disabled:opacity-50">
+                {saving ? '⏳ Publication...' : '✅ Signaler ce prix'}
               </button>
-              <p className="text-xs text-gray-400 text-center">Les acheteurs pourront te contacter directement sur WhatsApp</p>
             </div>
           </div>
         )}
 
-        <div className="flex gap-2 mb-4 overflow-x-auto pb-1">
+        {/* Filtres */}
+        <div className="flex gap-2 mb-5 overflow-x-auto pb-1">
           <select value={filtreVille} onChange={e => setFiltreVille(e.target.value)}
             className="border border-gray-200 rounded-xl px-3 py-2 text-sm bg-white outline-none shrink-0">
-            <option value="Toutes">📍 Toutes les villes</option>
-            {VILLES.map((v: string) => <option key={v} value={v}>{v}</option>)}
+            <option value="Toutes">📍 Toutes villes</option>
+            {VILLES.map(v => <option key={v} value={v}>{v}</option>)}
           </select>
           <select value={filtreProduit} onChange={e => setFiltreProduit(e.target.value)}
             className="border border-gray-200 rounded-xl px-3 py-2 text-sm bg-white outline-none shrink-0">
-            <option value="Tous">📦 Tous les produits</option>
-            {PRODUITS.map((p: string) => <option key={p} value={p}>{p}</option>)}
+            <option value="Tous">📦 Tous produits</option>
+            {PRODUITS.map(p => <option key={p} value={p}>{p}</option>)}
           </select>
         </div>
 
         {loading ? (
-          <div className="space-y-3">
-            {[...Array(4)].map((_, i) => <div key={i} className="bg-gray-200 rounded-2xl h-24 animate-pulse" />)}
-          </div>
-        ) : prixFiltres.length === 0 ? (
+          <div className="space-y-3">{[...Array(4)].map((_, i) => <div key={i} className="bg-gray-200 rounded-2xl h-24 animate-pulse" />)}</div>
+        ) : Object.keys(prixParProduit).length === 0 ? (
           <div className="text-center py-12 text-gray-400">
             <p className="text-4xl mb-3">📊</p>
-            <p className="font-semibold">Aucun prix pour le moment</p>
-            <p className="text-sm mt-1">Sois le premier à publier ton prix !</p>
+            <p className="font-semibold">Aucun prix disponible</p>
+            <p className="text-sm mt-1">Sois le premier à signaler un prix !</p>
           </div>
         ) : (
-          <div className="space-y-3">
-            {prixFiltres.map((p: PrixItem) => (
-              <div key={p.id} className="bg-white rounded-2xl shadow-sm p-4">
-                <div className="flex items-start justify-between">
-                  <div className="flex items-center gap-3">
-                    <span className="text-3xl">{getEmoji(p.produit)}</span>
-                    <div>
-                      <div className="font-bold text-gray-800">{p.produit}</div>
-                      <div className="text-xs text-gray-400">{p.type_vendeur} · 📍 {p.ville}</div>
-                      {p.quantite_dispo && <div className="text-xs text-green-600 mt-0.5">📦 {p.quantite_dispo}</div>}
-                    </div>
-                  </div>
-                  <div className="text-right">
-                    <div className="font-bold text-green-700 text-lg">{p.prix?.toLocaleString()} F</div>
-                    <div className="text-xs text-gray-400">/{p.unite}</div>
-                  </div>
+          <div className="space-y-6">
+            {Object.entries(prixParProduit).map(([produit, items]) => (
+              <div key={produit} className="bg-white rounded-2xl shadow-sm overflow-hidden">
+                <div className="bg-gray-50 px-4 py-3 flex items-center gap-2 border-b border-gray-100">
+                  <span className="text-2xl">{getEmoji(produit)}</span>
+                  <span className="font-bold text-gray-800">{produit}</span>
+                  <span className="ml-auto text-xs text-gray-400">{items.length} prix récents</span>
                 </div>
-                <div className="flex items-center justify-between mt-3 pt-3 border-t border-gray-50">
-                  <div>
-                    <div className="text-sm font-semibold text-gray-700">{p.vendeur}</div>
-                    {p.description && <div className="text-xs text-gray-400 mt-0.5">{p.description}</div>}
-                  </div>
-                  {p.telephone && (
-                    <a href={`https://wa.me/${p.telephone?.replace(/[^0-9]/g, '')}?text=Bonjour%20${encodeURIComponent(p.vendeur)}%2C%20j'ai%20vu%20ton%20annonce%20sur%20AgriMarché%20pour%20${encodeURIComponent(p.produit)}%20à%20${p.prix}F/${p.unite}.%20Je%20suis%20intéressé.`}
-                      target="_blank" rel="noopener noreferrer"
-                      className="bg-green-500 text-white text-xs font-bold px-4 py-2 rounded-xl flex items-center gap-1 hover:bg-green-400 transition">
-                      📱 WhatsApp
-                    </a>
-                  )}
+                <div className="divide-y divide-gray-50">
+                  {items.map(p => (
+                    <div key={p.id} className="px-4 py-3 flex items-center justify-between">
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${
+                            p.source === 'FAO'
+                              ? 'bg-blue-100 text-blue-700'
+                              : 'bg-green-100 text-green-700'
+                          }`}>
+                            {p.source || 'Terrain'}
+                          </span>
+                          <span className="text-sm text-gray-600">📍 {p.ville}{p.pays && p.pays !== 'Sénégal' ? ` (${p.pays})` : ''}</span>
+                        </div>
+                        <div className="text-xs text-gray-400 mt-0.5">{p.type_vendeur || p.vendeur}</div>
+                      </div>
+                      <div className="text-right">
+                        <div className="font-bold text-green-700 text-lg">{p.prix?.toLocaleString()} F</div>
+                        <div className="text-xs text-gray-400">/{p.unite}</div>
+                      </div>
+                    </div>
+                  ))}
                 </div>
               </div>
             ))}
           </div>
         )}
+
+        <p className="text-xs text-gray-400 text-center mt-8">
+          Données FAO/WFP mises à jour chaque semaine · Prix terrain signalés en temps réel
+        </p>
       </div>
     </div>
   )

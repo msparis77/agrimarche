@@ -255,7 +255,7 @@ export default function AdminPage() {
       <div className="bg-[#0a4a2f] text-white px-6 py-4 flex items-center justify-between">
         <div>
           <h1 className="text-xl font-extrabold">🌾 Admin — AgriMarché</h1>
-          <p className="text-green-300 text-xs mt-0.5">Tableau de bord</p>
+          <p className="text-green-300 text-xs mt-0.5">Tableau de bord · v2</p>
         </div>
         <div className="flex items-center gap-3">
           <button
