@@ -196,10 +196,21 @@ export default function AdminPage() {
   }
 
   const triggerCron = async () => {
-    const res = await fetch('/api/cron/fao-prices')
-    const json = await res.json()
-    alert(`Cron terminé : ${json.inserted} prix insérés (${json.source})`)
-    await loadStats()
+    try {
+      const res = await fetch('/api/cron/fao-prices')
+      const json = await res.json()
+      if (!res.ok || json.ok === false) {
+        alert(`❌ Erreur cron :\n${json.error || JSON.stringify(json)}`)
+        return
+      }
+      const msg = json.message
+        ? `ℹ️ ${json.message}`
+        : `✅ ${json.inserted ?? 0} prix insérés\n📊 Parsés : ${json.parsed ?? '?'} | Filtrés : ${json.filtered ?? '?'}\n📅 ${json.date}`
+      alert(msg)
+      await loadStats()
+    } catch (err: any) {
+      alert(`❌ Erreur réseau : ${err.message}`)
+    }
   }
 
   // ── Écrans d'état ─────────────────────────────────────────────────
