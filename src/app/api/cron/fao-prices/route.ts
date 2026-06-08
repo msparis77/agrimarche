@@ -1,44 +1,74 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 
-// Données de référence : correspondances noms français → noms WFP en anglais
-const PRODUITS_WFP: Record<string, string[]> = {
-  'Riz':       ['Rice', 'Rice (imported)', 'Rice (local)'],
-  'Mil':       ['Millet', 'Pearl millet'],
-  'Maïs':      ['Maize', 'Corn'],
-  'Sorgho':    ['Sorghum'],
-  'Arachide':  ['Groundnuts', 'Peanuts (shelled)'],
-  'Niébé':     ['Cowpeas', 'Beans (cowpea)'],
-  'Tomate':    ['Tomatoes', 'Tomato'],
-  'Oignon':    ['Onions', 'Onion'],
+// Mapping noms anglais WFP → noms français AgriMarché
+const MAPPING_PRODUITS: Record<string, string> = {
+  'maize':            'Maïs',
+  'corn':             'Maïs',
+  'millet':           'Mil',
+  'pearl millet':     'Mil',
+  'sorghum':          'Sorgho',
+  'rice':             'Riz',
+  'rice (imported)':  'Riz',
+  'rice (local)':     'Riz',
+  'rice (ordinary':   'Riz',
+  'wheat':            'Blé',
+  'groundnuts':       'Arachide',
+  'peanuts':          'Arachide',
+  'beans (niebe)':    'Niébé',
+  'cowpeas':          'Niébé',
+  'niebe':            'Niébé',
+  'tomatoes':         'Tomate',
+  'tomato':           'Tomate',
+  'onions':           'Oignon',
+  'onion':            'Oignon',
+  'cassava':          'Manioc',
+  'sweet potato':     'Patate douce',
+  'fonio':            'Fonio',
 }
 
-const PAYS_WFP = [
-  { code: 'SN', nom: 'Sénégal', wfpCode: 'SEN' },
-  { code: 'GM', nom: 'Gambie',  wfpCode: 'GMB' },
-  { code: 'GN', nom: 'Guinée',  wfpCode: 'GIN' },
+// CSV HDX OCHA — données réelles WFP, mises à jour mensuellement, 100% gratuit
+const SOURCES_CSV = [
+  {
+    url: 'https://data.humdata.org/dataset/77b76bc7-1edd-43f6-a5e4-784498ff6aca/resource/04ffc070-6d05-4653-a9f6-9f3f893a229e/download/',
+    pays: 'Sénégal',
+  },
 ]
 
-// Prix de référence réalistes (FCFA/kg) utilisés si l'API WFP n'est pas configurée
-const PRIX_REFERENCE: Record<string, { min: number; max: number; unite: string }> = {
-  'Riz':      { min: 400,  max: 600,  unite: 'kg' },
-  'Mil':      { min: 200,  max: 350,  unite: 'kg' },
-  'Maïs':     { min: 180,  max: 280,  unite: 'kg' },
-  'Sorgho':   { min: 180,  max: 300,  unite: 'kg' },
-  'Arachide': { min: 350,  max: 550,  unite: 'kg' },
-  'Niébé':    { min: 500,  max: 800,  unite: 'kg' },
-  'Tomate':   { min: 300,  max: 700,  unite: 'kg' },
-  'Oignon':   { min: 200,  max: 500,  unite: 'kg' },
+function mapProduit(commodityName: string): string | null {
+  const lower = commodityName.toLowerCase()
+  for (const [key, fr] of Object.entries(MAPPING_PRODUITS)) {
+    if (lower.startsWith(key) || lower.includes(key)) return fr
+  }
+  return null
 }
 
-const VILLES_PAR_PAYS: Record<string, string[]> = {
-  'Sénégal': ['Dakar', 'Thiès', 'Kaolack', 'Ziguinchor', 'Saint-Louis'],
-  'Gambie':  ['Banjul', 'Brikama', 'Kanifing'],
-  'Guinée':  ['Conakry', 'Labé', 'Kindia'],
+function parseCsv(text: string): Record<string, string>[] {
+  const lines = text.trim().split('\n')
+  if (lines.length < 2) return []
+  const headers = lines[0].split(',').map(h => h.trim().replace(/"/g, ''))
+  const rows: Record<string, string>[] = []
+  for (let i = 1; i < lines.length; i++) {
+    // Gérer les virgules dans les guillemets
+    const cols: string[] = []
+    let cur = '', inQuote = false
+    for (const ch of lines[i]) {
+      if (ch === '"') { inQuote = !inQuote }
+      else if (ch === ',' && !inQuote) { cols.push(cur.trim()); cur = '' }
+      else { cur += ch }
+    }
+    cols.push(cur.trim())
+    if (cols.length >= headers.length) {
+      const row: Record<string, string> = {}
+      headers.forEach((h, idx) => { row[h] = cols[idx] ?? '' })
+      rows.push(row)
+    }
+  }
+  return rows
 }
 
 export async function GET(req: NextRequest) {
-  // Sécurité : vérifier le token Vercel Cron
+  // Protection optionnelle par CRON_SECRET
   const authHeader = req.headers.get('authorization')
   const cronSecret = process.env.CRON_SECRET
   if (cronSecret && authHeader !== `Bearer ${cronSecret}`) {
@@ -50,102 +80,78 @@ export async function GET(req: NextRequest) {
     process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
   )
 
-  const wfpToken = process.env.WFP_API_TOKEN
   const logs: string[] = []
   let totalInserted = 0
-  const periodeAujourdhui = new Date().toISOString().split('T')[0]
+  const aujourd_hui = new Date().toISOString().split('T')[0]
 
-  // ── Essai WFP DataBridges API ─────────────────────────────────
-  if (wfpToken) {
-    logs.push('WFP token found, trying DataBridges API...')
-    for (const pays of PAYS_WFP) {
-      try {
-        const url = `https://api.wfp.org/vam-data-bridges/2.0/MarketPrices/PriceMonthly?CountryCode=${pays.code}&Page=1&format=json`
-        const res = await fetch(url, {
-          headers: { Authorization: `Bearer ${wfpToken}` },
-          signal: AbortSignal.timeout(10000),
-        })
-        if (!res.ok) {
-          logs.push(`WFP ${pays.code}: HTTP ${res.status}`)
-          continue
-        }
-        const json = await res.json()
-        const items = json?.value || json?.data || json?.items || []
-        logs.push(`WFP ${pays.code}: ${items.length} rows received`)
+  // Seuil : on n'insère que les données des 3 derniers mois
+  const seuil = new Date()
+  seuil.setMonth(seuil.getMonth() - 3)
 
-        for (const item of items) {
-          // Mapper le nom WFP vers nom français
-          const nomWfp = (item.cmname || item.commodity || '').toLowerCase()
-          let produitFr: string | null = null
-          for (const [fr, aliases] of Object.entries(PRODUITS_WFP)) {
-            if (aliases.some(a => nomWfp.includes(a.toLowerCase()))) {
-              produitFr = fr; break
-            }
-          }
-          if (!produitFr) continue
-          const prix = parseFloat(item.price || item.mp_price || 0)
-          if (!prix || prix <= 0) continue
-
-          await supabase.from('prix_marche').insert({
-            produit: produitFr,
-            prix: Math.round(prix),
-            unite: item.unit || 'kg',
-            ville: item.mktname || item.market || 'Capitale',
-            pays: pays.nom,
-            source: 'FAO',
-            periode: item.date || item.mp_month || periodeAujourdhui,
-            vendeur: 'WFP DataBridges',
-            description: `Source WFP/FAO – ${item.mktname || pays.nom}`,
-          })
-          totalInserted++
-        }
-      } catch (err: any) {
-        logs.push(`WFP ${pays.code} error: ${err.message}`)
+  for (const source of SOURCES_CSV) {
+    try {
+      logs.push(`Téléchargement CSV ${source.pays}...`)
+      const res = await fetch(source.url, {
+        signal: AbortSignal.timeout(30000),
+        headers: { 'User-Agent': 'AgriMarche-Cron/1.0' },
+      })
+      if (!res.ok) {
+        logs.push(`Erreur HTTP ${res.status} pour ${source.pays}`)
+        continue
       }
-    }
-  } else {
-    logs.push('No WFP_API_TOKEN — generating reference prices')
-    // Insérer des prix de référence réalistes (variation hebdomadaire ±5%)
-    for (const pays of PAYS_WFP) {
-      const villes = VILLES_PAR_PAYS[pays.nom]
-      for (const produit of Object.keys(PRIX_REFERENCE)) {
-        const ref = PRIX_REFERENCE[produit]
-        const ville = villes[Math.floor(Math.random() * villes.length)]
-        const prixBase = ref.min + Math.random() * (ref.max - ref.min)
-        const variation = 0.95 + Math.random() * 0.10 // ±5%
-        const prix = Math.round(prixBase * variation)
 
-        // Éviter les doublons pour la même semaine
+      const text = await res.text()
+      const rows = parseCsv(text)
+      logs.push(`${rows.length} lignes parsées pour ${source.pays}`)
+
+      // Filtrer : données récentes + prix en XOF (FCFA) + type Retail
+      const recents = rows.filter(r => {
+        const date = new Date(r.date)
+        return date >= seuil && r.currency === 'XOF' && r.pricetype === 'Retail' && parseFloat(r.price) > 0
+      })
+      logs.push(`${recents.length} lignes récentes (3 mois, XOF, Retail)`)
+
+      for (const row of recents) {
+        const produitFr = mapProduit(row.commodity)
+        if (!produitFr) continue
+        const prix = Math.round(parseFloat(row.price))
+        if (!prix || prix <= 0) continue
+
+        // Éviter les doublons : même produit + marché + date
         const { count } = await supabase
           .from('prix_marche')
           .select('*', { count: 'exact', head: true })
-          .eq('produit', produit)
-          .eq('pays', pays.nom)
+          .eq('produit', produitFr)
+          .eq('ville', row.market)
           .eq('source', 'FAO')
-          .gte('created_at', new Date(Date.now() - 6 * 86400000).toISOString())
+          .gte('created_at', new Date(new Date(row.date).getTime() - 20 * 86400000).toISOString())
 
         if ((count ?? 0) > 0) continue
 
         await supabase.from('prix_marche').insert({
-          produit,
+          produit: produitFr,
           prix,
-          unite: ref.unite,
-          ville,
-          pays: pays.nom,
+          unite: row.unit?.toLowerCase() || 'kg',
+          ville: row.market || row.admin2 || row.admin1 || 'Sénégal',
+          pays: source.pays,
           source: 'FAO',
-          periode: periodeAujourdhui,
-          vendeur: 'Référence AgriMarché',
-          description: `Prix de référence hebdomadaire – données indicatives`,
+          periode: row.date || aujourd_hui,
+          vendeur: 'WFP/OCHA HDX',
+          description: `${row.commodity} — ${row.market}, ${row.admin1}`,
         })
         totalInserted++
       }
+
+      logs.push(`${totalInserted} insérés pour ${source.pays}`)
+    } catch (err: any) {
+      logs.push(`Erreur ${source.pays}: ${err.message}`)
     }
   }
 
   return NextResponse.json({
     ok: true,
-    date: periodeAujourdhui,
-    source: wfpToken ? 'WFP DataBridges' : 'Référence (configurer WFP_API_TOKEN)',
+    date: aujourd_hui,
+    source: 'WFP/OCHA HDX (données réelles)',
     inserted: totalInserted,
     logs,
   })
