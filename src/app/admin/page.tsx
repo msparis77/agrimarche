@@ -197,19 +197,26 @@ export default function AdminPage() {
 
   const triggerCron = async () => {
     try {
-      const res = await fetch('/api/cron/fao-prices')
+      // Récupérer le token de session pour l'authentifier côté serveur
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session?.access_token) { alert('❌ Session expirée, reconnecte-toi'); return }
+
+      const res = await fetch('/api/admin/insert-prices', {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${session.access_token}` },
+      })
       const json = await res.json()
       if (!res.ok || json.ok === false) {
-        alert(`❌ Erreur cron :\n${json.error || JSON.stringify(json)}`)
+        alert(`❌ Erreur :\n${json.error || JSON.stringify(json)}`)
         return
       }
       const msg = json.message
         ? `ℹ️ ${json.message}`
-        : `✅ ${json.inserted ?? 0} prix insérés\n📊 Parsés : ${json.parsed ?? '?'} | Filtrés : ${json.filtered ?? '?'}\n📅 ${json.date}`
+        : `✅ ${json.inserted} prix insérés\n📅 ${json.date}\n📦 ${json.source}`
       alert(msg)
       await loadStats()
     } catch (err: any) {
-      alert(`❌ Erreur réseau : ${err.message}`)
+      alert(`❌ Erreur : ${err.message}`)
     }
   }
 
