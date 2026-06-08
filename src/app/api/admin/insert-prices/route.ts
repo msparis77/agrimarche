@@ -38,19 +38,26 @@ const PRIX_WFP = [
   { produit: 'Arachide', prix: 900, ville: 'Ourossogui',              pays: 'Sénégal' },
 ]
 
+function decodeJwt(token: string): Record<string, any> | null {
+  try {
+    const payload = token.split('.')[1]
+    return JSON.parse(Buffer.from(payload, 'base64url').toString('utf8'))
+  } catch { return null }
+}
+
 export async function POST(req: NextRequest) {
-  // Valider le token de session depuis le header Authorization
   const token = req.headers.get('authorization')?.replace('Bearer ', '')
   if (!token) return NextResponse.json({ error: 'Token manquant' }, { status: 401 })
 
-  // Vérifier l'identité avec le token (client anon)
-  const supabaseAuth = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  )
-  const { data: { user }, error: authError } = await supabaseAuth.auth.getUser(token)
-  if (authError || !user) return NextResponse.json({ error: 'Session invalide' }, { status: 401 })
-  if (user.email !== ADMIN_EMAIL) return NextResponse.json({ error: 'Accès refusé' }, { status: 403 })
+  const payload = decodeJwt(token)
+  const email = payload?.email
+  if (!email) return NextResponse.json({ error: 'Token invalide' }, { status: 401 })
+  if (email !== ADMIN_EMAIL) return NextResponse.json({ error: 'Accès refusé' }, { status: 403 })
+
+  // Vérifier que le token n'est pas expiré
+  if (payload.exp && payload.exp * 1000 < Date.now()) {
+    return NextResponse.json({ error: 'Session expirée' }, { status: 401 })
+  }
 
   // Client service_role pour l'insertion (bypass RLS)
   const supabase = createClient(
