@@ -109,24 +109,22 @@ export default function AdminPage() {
     setStatus('loading')
     setDebugInfo('Vérification...')
     try {
-      // 1. Vérifier l'utilisateur via Supabase Auth (email vérifié côté serveur)
-      const { data: { user }, error: userError } = await supabase.auth.getUser()
-      if (userError) throw new Error(`Auth: ${userError.message}`)
-      if (!user) { setStatus('unauth'); return }
+      // getSession() lit depuis localStorage — pas d'erreur "Auth session missing"
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session?.user) { setStatus('unauth'); return }
+
+      const user = session.user
       setDebugInfo(`Connecté: ${user.email}`)
 
-      // 2. Vérifier que c'est le bon email admin
       if (user.email !== ADMIN_EMAIL) {
         setDebugInfo(`Accès refusé: ${user.email} n'est pas admin`)
         setStatus('notadmin')
         return
       }
 
-      // 3. Vérifier le PIN
       const alreadyUnlocked = sessionStorage.getItem('admin_unlocked') === '1'
       if (!alreadyUnlocked) { setStatus('ready'); return }
 
-      // 4. Charger les stats
       setDebugInfo('')
       await loadStats()
     } catch (err: any) {

@@ -14,6 +14,7 @@ export default function Navbar() {
   const { lang, setLang, t } = useLang()
   const langs: Lang[] = ['fr', 'en', 'wo']
   const langLabels = { fr: 'FR', en: 'EN', wo: 'WO' }
+  const isAdmin = user?.email === 'mstreize@gmail.com'
 
   return (
     <>
@@ -52,6 +53,11 @@ export default function Navbar() {
                 <Link href="/messages" className="text-sm font-medium text-gray-600 hover:text-[#166534] transition">{t.nav.messages}</Link>
                 <Link href="/mes-annonces" className="text-sm font-medium text-gray-600 hover:text-[#166534] transition">Mes annonces</Link>
                 <Link href="/dashboard" className="text-sm font-medium text-gray-600 hover:text-[#166534] transition">{t.nav.dashboard}</Link>
+                {isAdmin && (
+                  <Link href="/admin" className="text-sm font-medium text-purple-600 hover:text-purple-800 transition font-semibold">
+                    ⚙️ Admin
+                  </Link>
+                )}
                 <Link href="/vendre" className="bg-[#166534] text-white font-bold px-4 py-2 rounded-xl text-sm hover:bg-green-800 transition">
                   {t.nav.sell}
                 </Link>
@@ -116,6 +122,7 @@ export default function Navbar() {
                   { href: '/messages', label: '💬 Messages' },
                   { href: '/mes-annonces', label: '📢 Mes annonces' },
                   { href: '/dashboard', label: '⚙️ Mon profil' },
+                  ...(isAdmin ? [{ href: '/admin', label: '🔐 Administration', admin: true }] : []),
                   { href: '/vendre', label: '➕ Publier une annonce', highlight: true },
                 ] : [
                   { href: '/login', label: '🔑 Connexion', highlight: true },
@@ -124,7 +131,7 @@ export default function Navbar() {
               ].map(item => (
                 <Link key={item.href} href={item.href} onClick={() => setOpen(false)}
                   className={`flex items-center py-3 px-3 rounded-xl text-sm font-medium transition
-                    ${(item as any).highlight ? 'bg-[#166534] text-white mt-2' : 'text-gray-700 hover:bg-gray-50'}`}>
+                    ${(item as any).highlight ? 'bg-[#166534] text-white mt-2' : (item as any).admin ? 'text-purple-600 hover:bg-purple-50 font-semibold' : 'text-gray-700 hover:bg-gray-50'}`}>
                   {item.label}
                 </Link>
               ))}
