@@ -72,6 +72,9 @@ function PinLock({ onUnlock }: { onUnlock: () => void }) {
   )
 }
 
+// Email autorisé à accéder à l'admin (vérifié via Supabase Auth, pas via la DB)
+const ADMIN_EMAIL = 'mstreize@gmail.com'
+
 // ── Main Admin Page ───────────────────────────────────────────────
 export default function AdminPage() {
   const router = useRouter()
@@ -99,31 +102,27 @@ export default function AdminPage() {
 
   const checkAuthAndLoad = async () => {
     setStatus('loading')
-    setDebugInfo('Démarrage...')
+    setDebugInfo('Vérification...')
     try {
-      // 1. Vérifier l'utilisateur (getUser = vérification serveur, plus fiable que getSession)
-      setDebugInfo('Vérification utilisateur...')
+      // 1. Vérifier l'utilisateur via Supabase Auth (email vérifié côté serveur)
       const { data: { user }, error: userError } = await supabase.auth.getUser()
       if (userError) throw new Error(`Auth: ${userError.message}`)
-      if (!user) { setDebugInfo('Aucun utilisateur connecté'); setStatus('unauth'); return }
-      setDebugInfo(`Utilisateur: ${user.email} (${user.id.slice(0, 8)}...)`)
+      if (!user) { setStatus('unauth'); return }
+      setDebugInfo(`Connecté: ${user.email}`)
 
-      // 2. Vérifier le rôle admin
-      const { data: profile, error: profileError } = await supabase
-        .from('profiles')
-        .select('role, email')
-        .eq('id', user.id)
-        .maybeSingle()
-      if (profileError) throw new Error(`Profil DB: ${profileError.message}`)
-      if (!profile) throw new Error(`Aucun profil trouvé pour id=${user.id.slice(0, 8)}`)
-      setDebugInfo(`Profil: email=${profile.email} role=${profile.role}`)
-      if (profile.role !== 'admin') { setStatus('notadmin'); return }
+      // 2. Vérifier que c'est le bon email admin
+      if (user.email !== ADMIN_EMAIL) {
+        setDebugInfo(`Accès refusé: ${user.email} n'est pas admin`)
+        setStatus('notadmin')
+        return
+      }
 
       // 3. Vérifier le PIN
       const alreadyUnlocked = sessionStorage.getItem('admin_unlocked') === '1'
       if (!alreadyUnlocked) { setStatus('ready'); return }
 
       // 4. Charger les stats
+      setDebugInfo('')
       await loadStats()
     } catch (err: any) {
       setErrorMsg(err?.message || 'Erreur inconnue')
