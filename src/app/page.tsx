@@ -57,7 +57,15 @@ export default function HomePage() {
   }
 
   const getEmojiproduit = (produit: string) => {
-    const map: any = { 'Riz': '🌾', 'Mil': '🌾', 'Maïs': '🌽', 'Arachide': '🥜', 'Oignon': '🧅', 'Tomate': '🍅', 'Manioc': '🥔', 'Banane': '🍌', 'Poisson': '🐟' }
+    const map: any = {
+      'Riz':'🌾','Mil':'🌾','Maïs':'🌽','Sorgho':'🌾','Fonio':'🌾',
+      'Arachide':'🥜','Niébé':'🫘','Haricot':'🫘',
+      'Oignon':'🧅','Tomate':'🍅','Gombo':'🥬','Piment':'🌶️','Aubergine':'🍆','Chou':'🥦','Carotte':'🥕','Manioc':'🥔',
+      'Mangue':'🥭','Banane':'🍌','Orange':'🍊','Pastèque':'🍉',
+      'Poulet':'🐔','Mouton':'🐑','Bœuf':'🐄','Volaille':'🐔',
+      'Thiof':'🐟','Yabou':'🐠','Carpe':'🐟','Poisson':'🐟',
+      'Huile arachide':'🫙','Huile palme':'🫙','Sucre':'🍬','Farine blé':'🌾','Lait poudre':'🥛',
+    }
     return map[produit] || '📦'
   }
 
