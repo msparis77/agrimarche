@@ -1,6 +1,13 @@
 'use client'
 
+import dynamic from 'next/dynamic'
 import { COUNTRIES_DATA, Country, WfpStatus } from '@/lib/countries'
+import Flag, { FLAGS } from '@/components/Flag'
+
+const MarketMap = dynamic(() => import('@/components/MarketMap'), {
+  ssr: false,
+  loading: () => <div className="w-full h-64 rounded-xl bg-gray-100 animate-pulse" />,
+})
 
 // Carte schématique de l'Afrique de l'Ouest : chaque pays est un point placé
 // à partir de ses coordonnées (longitude / latitude). Ce n'est pas un fond de
@@ -51,11 +58,15 @@ export default function CountryMap({ selected, onSelect, actionLabel, onAction }
                className="cursor-pointer" role="button" tabIndex={0}
                aria-label={c.nom} aria-pressed={actif}
                onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') onSelect(actif ? '' : c.nom) }}>
-              <circle cx={x(c.lng)} cy={y(c.lat)} r={actif ? 17 : 13}
-                      fill={actif ? '#166534' : '#dcfce7'} stroke={actif ? '#f5c842' : st.couleur}
-                      strokeWidth={actif ? 3 : 2} />
-              <text x={x(c.lng)} y={y(c.lat) + 5} textAnchor="middle" fontSize={actif ? 15 : 13}>{c.flag}</text>
-              <text x={x(c.lng)} y={y(c.lat) + (c.code === 'SN' ? -20 : 29)} textAnchor="middle" fontSize={10} fontWeight={600}
+              <rect x={x(c.lng) - (actif ? 21 : 17)} y={y(c.lat) - (actif ? 15 : 12)}
+                    width={actif ? 42 : 34} height={actif ? 30 : 24} rx={4}
+                    fill="#fff" stroke={actif ? '#f5c842' : st.couleur} strokeWidth={actif ? 3 : 2} />
+              {(() => {
+                const F = FLAGS[c.code]
+                const w = actif ? 36 : 28, h = actif ? 24 : 18
+                return F ? <F x={x(c.lng) - w / 2} y={y(c.lat) - h / 2} width={w} height={h} /> : null
+              })()}
+              <text x={x(c.lng)} y={y(c.lat) + (c.code === 'SN' ? -22 : 30)} textAnchor="middle" fontSize={10} fontWeight={600}
                     fill={actif ? '#166534' : '#475569'}>{c.nom}</text>
             </g>
           )
@@ -69,7 +80,7 @@ export default function CountryMap({ selected, onSelect, actionLabel, onAction }
             className={`px-2.5 py-1 rounded-full text-xs font-semibold border transition ${
               c.nom === selected ? 'bg-green-700 text-white border-green-700' : 'bg-white text-gray-600 border-gray-200'
             }`}>
-            {c.flag} {c.nom}
+            <Flag code={c.code} className="w-4 h-3 mr-1 align-[-1px]" />{c.nom}
           </button>
         ))}
       </div>
@@ -78,17 +89,20 @@ export default function CountryMap({ selected, onSelect, actionLabel, onAction }
       {pays && (
         <div className="border-t border-gray-100 px-4 py-4 bg-green-50/40">
           <div className="flex items-center justify-between gap-2 flex-wrap">
-            <h3 className="font-bold text-gray-900">{pays.flag} {pays.nom}</h3>
+            <h3 className="font-bold text-gray-900 flex items-center gap-2"><Flag code={pays.code} className="w-7 h-5" />{pays.nom}</h3>
             <span className="text-xs text-gray-500">Monnaie : {pays.deviseLabel}</span>
           </div>
 
           <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mt-3 mb-1.5">
             Marchés de référence
           </p>
+          <div className="mb-3">
+            <MarketMap key={pays.code} marches={pays.marches} nomPays={pays.nom} />
+          </div>
           <ul className="space-y-1">
-            {pays.marches.map(m => (
+            {pays.marches.map((m, i) => (
               <li key={m.nom + m.ville} className="text-sm text-gray-700 flex items-start gap-2">
-                <span>📍</span>
+                <span className="shrink-0 w-5 h-5 rounded-full bg-green-700 text-white text-[11px] font-bold flex items-center justify-center mt-0.5">{i + 1}</span>
                 <span><span className="font-semibold">{m.nom}</span> — {m.ville}</span>
               </li>
             ))}

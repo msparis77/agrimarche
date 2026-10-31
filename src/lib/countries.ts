@@ -13,6 +13,8 @@ export type WfpStatus =
 export interface RefMarket {
   nom: string        // nom du marché
   ville: string      // ville (valeur utilisée dans les filtres)
+  lat: number        // position approximative (centre de la ville), pas l'adresse exacte du marché
+  lng: number
   note?: string
 }
 
@@ -20,7 +22,6 @@ export interface Country {
   code: string       // ISO alpha-2
   nom: string        // valeur stockée en base (colonne `pays`)
   nomEn: string
-  flag: string
   devise: string     // code stocké dans products.devise
   deviseLabel: string // affiché à l'écran
   indicatif: string
@@ -36,17 +37,17 @@ export interface Country {
 
 export const COUNTRIES_DATA: Country[] = [
   {
-    code: 'SN', nom: 'Sénégal', nomEn: 'Senegal', flag: '🇸🇳',
+    code: 'SN', nom: 'Sénégal', nomEn: 'Senegal',
     devise: 'XOF', deviseLabel: 'FCFA', indicatif: '+221',
     regions: ['Dakar', 'Thiès', 'Kaolack', 'Ziguinchor', 'Saint-Louis', 'Tambacounda', 'Kolda', 'Fatick', 'Kaffrine', 'Kédougou', 'Louga', 'Matam', 'Sédhiou', 'Diourbel'],
     marches: [
-      { nom: 'Tilène', ville: 'Dakar' },
-      { nom: 'Marché central', ville: 'Thiès' },
-      { nom: 'Marché central', ville: 'Kaolack' },
-      { nom: 'Marché de Saint-Louis', ville: 'Saint-Louis' },
-      { nom: 'Marché de Ziguinchor', ville: 'Ziguinchor' },
-      { nom: 'Marché de Tambacounda', ville: 'Tambacounda' },
-      { nom: 'Ourossogui', ville: 'Ourossogui' },
+      { nom: 'Tilène', ville: 'Dakar', lat: 14.678, lng: -17.45 },
+      { nom: 'Marché central', ville: 'Thiès', lat: 14.791, lng: -16.936 },
+      { nom: 'Marché central', ville: 'Kaolack', lat: 14.165, lng: -16.076 },
+      { nom: 'Marché de Saint-Louis', ville: 'Saint-Louis', lat: 16.018, lng: -16.49 },
+      { nom: 'Marché de Ziguinchor', ville: 'Ziguinchor', lat: 12.583, lng: -16.272 },
+      { nom: 'Marché de Tambacounda', ville: 'Tambacounda', lat: 13.771, lng: -13.667 },
+      { nom: 'Ourossogui', ville: 'Ourossogui', lat: 15.61, lng: -13.32 },
     ],
     cultures: "arachide, mil, sorgho, maïs, riz (vallée du fleuve Sénégal et Casamance), niébé, oignon (Niayes), tomate, mangue, pêche (thiof, yabou)",
     hdxId: 'wfp-food-prices-for-senegal', wfp: 'oui',
@@ -54,14 +55,14 @@ export const COUNTRIES_DATA: Country[] = [
     lat: 15.6, lng: -14.4, // position légèrement décalée pour ne pas masquer la Gambie sur la carte
   },
   {
-    code: 'GM', nom: 'Gambie', nomEn: 'The Gambia', flag: '🇬🇲',
+    code: 'GM', nom: 'Gambie', nomEn: 'The Gambia',
     devise: 'GMD', deviseLabel: 'GMD (dalasi)', indicatif: '+220',
     regions: ['Banjul', 'Brikama', 'Kanifing', 'Basse', 'Janjanbureh', 'Kerewan', 'Kuntaur', 'Mansakonko'],
     marches: [
-      { nom: 'Albert Market', ville: 'Banjul' },
-      { nom: 'Serrekunda Market', ville: 'Kanifing' },
-      { nom: 'Brikama Market', ville: 'Brikama' },
-      { nom: 'Basse Market', ville: 'Basse' },
+      { nom: 'Albert Market', ville: 'Banjul', lat: 13.455, lng: -16.579 },
+      { nom: 'Serrekunda Market', ville: 'Kanifing', lat: 13.438, lng: -16.678 },
+      { nom: 'Brikama Market', ville: 'Brikama', lat: 13.271, lng: -16.649 },
+      { nom: 'Basse Market', ville: 'Basse', lat: 13.317, lng: -14.217 },
     ],
     cultures: 'arachide, mil, riz, maïs, sorgho, niébé, sésame, légumes maraîchers',
     hdxId: null, wfp: 'inconnu',
@@ -69,15 +70,15 @@ export const COUNTRIES_DATA: Country[] = [
     lat: 13.0, lng: -15.9, // idem (position schématique)
   },
   {
-    code: 'GN', nom: 'Guinée', nomEn: 'Guinea', flag: '🇬🇳',
+    code: 'GN', nom: 'Guinée', nomEn: 'Guinea',
     devise: 'GNF', deviseLabel: 'GNF (franc guinéen)', indicatif: '+224',
     regions: ['Conakry', 'Labé', 'Kankan', 'Kindia', 'Boké', 'Faranah', 'Mamou', "N'Zérékoré"],
     marches: [
-      { nom: 'Madina', ville: 'Conakry' },
-      { nom: 'Marché de Kankan', ville: 'Kankan' },
-      { nom: 'Marché de Labé', ville: 'Labé' },
-      { nom: 'Marché de Kindia', ville: 'Kindia' },
-      { nom: "Marché de N'Zérékoré", ville: "N'Zérékoré" },
+      { nom: 'Madina', ville: 'Conakry', lat: 9.546, lng: -13.673 },
+      { nom: 'Marché de Kankan', ville: 'Kankan', lat: 10.385, lng: -9.306 },
+      { nom: 'Marché de Labé', ville: 'Labé', lat: 11.318, lng: -12.283 },
+      { nom: 'Marché de Kindia', ville: 'Kindia', lat: 10.057, lng: -12.866 },
+      { nom: "Marché de N'Zérékoré", ville: "N'Zérékoré", lat: 7.756, lng: -8.818 },
     ],
     cultures: 'riz, manioc, fonio, maïs, arachide, pomme de terre (Fouta), huile de palme, banane, ananas',
     hdxId: null, wfp: 'inconnu',
@@ -85,14 +86,14 @@ export const COUNTRIES_DATA: Country[] = [
     lat: 10.9, lng: -11.0,
   },
   {
-    code: 'CV', nom: 'Cap-Vert', nomEn: 'Cabo Verde', flag: '🇨🇻',
+    code: 'CV', nom: 'Cap-Vert', nomEn: 'Cabo Verde',
     devise: 'CVE', deviseLabel: 'CVE (escudo)', indicatif: '+238',
     regions: ['Praia', 'Assomada', 'Tarrafal', 'Mindelo', 'Santa Maria', 'Espargos', 'Porto Novo', 'Ribeira Grande', 'São Filipe', 'Sal Rei', 'Vila do Maio'],
     marches: [
-      { nom: 'Sucupira', ville: 'Praia' },
-      { nom: 'Marché d\'Assomada', ville: 'Assomada' },
-      { nom: 'Mercado Municipal', ville: 'Mindelo' },
-      { nom: 'Marché de São Filipe', ville: 'São Filipe' },
+      { nom: 'Sucupira', ville: 'Praia', lat: 14.933, lng: -23.513 },
+      { nom: 'Marché d\'Assomada', ville: 'Assomada', lat: 15.098, lng: -23.678 },
+      { nom: 'Mercado Municipal', ville: 'Mindelo', lat: 16.886, lng: -24.989 },
+      { nom: 'Marché de São Filipe', ville: 'São Filipe', lat: 14.896, lng: -24.496 },
     ],
     cultures: "maïs, haricots, manioc, patate douce, canne à sucre (grogue), banane, papaye, légumes irrigués. Archipel sec et volcanique : sécheresse fréquente, peu de terres arables, forte dépendance aux importations",
     hdxId: null, wfp: 'non',
@@ -100,16 +101,16 @@ export const COUNTRIES_DATA: Country[] = [
     lat: 15.1, lng: -23.6,
   },
   {
-    code: 'CI', nom: "Côte d'Ivoire", nomEn: 'Ivory Coast', flag: '🇨🇮',
+    code: 'CI', nom: "Côte d'Ivoire", nomEn: 'Ivory Coast',
     devise: 'XOF', deviseLabel: 'FCFA', indicatif: '+225',
     regions: ['Abidjan', 'Yamoussoukro', 'Bouaké', 'Daloa', 'San-Pédro', 'Korhogo', 'Man', 'Gagnoa', 'Abengourou', 'Odienné', 'Bondoukou', 'Divo'],
     marches: [
-      { nom: 'Adjamé', ville: 'Abidjan' },
-      { nom: 'Treichville', ville: 'Abidjan' },
-      { nom: 'Marché de Bouaké', ville: 'Bouaké' },
-      { nom: 'Marché de Korhogo', ville: 'Korhogo' },
-      { nom: 'Marché de Daloa', ville: 'Daloa' },
-      { nom: 'Marché de San-Pédro', ville: 'San-Pédro' },
+      { nom: 'Adjamé', ville: 'Abidjan', lat: 5.367, lng: -4.028 },
+      { nom: 'Treichville', ville: 'Abidjan', lat: 5.297, lng: -4.005 },
+      { nom: 'Marché de Bouaké', ville: 'Bouaké', lat: 7.691, lng: -5.03 },
+      { nom: 'Marché de Korhogo', ville: 'Korhogo', lat: 9.458, lng: -5.63 },
+      { nom: 'Marché de Daloa', ville: 'Daloa', lat: 6.877, lng: -6.45 },
+      { nom: 'Marché de San-Pédro', ville: 'San-Pédro', lat: 4.749, lng: -6.636 },
     ],
     cultures: 'cacao, café, anacarde (noix de cajou), hévéa, palmier à huile, igname, manioc, banane plantain, riz, maïs, coton (nord)',
     hdxId: 'wfp-food-prices-for-cote-divoire', wfp: 'ancien',
@@ -117,15 +118,15 @@ export const COUNTRIES_DATA: Country[] = [
     lat: 7.6, lng: -5.5,
   },
   {
-    code: 'BJ', nom: 'Bénin', nomEn: 'Benin', flag: '🇧🇯',
+    code: 'BJ', nom: 'Bénin', nomEn: 'Benin',
     devise: 'XOF', deviseLabel: 'FCFA', indicatif: '+229',
     regions: ['Cotonou', 'Porto-Novo', 'Abomey-Calavi', 'Parakou', 'Bohicon', 'Natitingou', 'Djougou', 'Lokossa', 'Kandi', 'Malanville', 'Dassa-Zoumè', 'Ouidah'],
     marches: [
-      { nom: 'Dantokpa', ville: 'Cotonou' },
-      { nom: 'Ouando', ville: 'Porto-Novo' },
-      { nom: 'Marché de Parakou', ville: 'Parakou' },
-      { nom: 'Marché de Bohicon', ville: 'Bohicon' },
-      { nom: 'Marché de Malanville', ville: 'Malanville' },
+      { nom: 'Dantokpa', ville: 'Cotonou', lat: 6.367, lng: 2.433 },
+      { nom: 'Ouando', ville: 'Porto-Novo', lat: 6.497, lng: 2.629 },
+      { nom: 'Marché de Parakou', ville: 'Parakou', lat: 9.337, lng: 2.63 },
+      { nom: 'Marché de Bohicon', ville: 'Bohicon', lat: 7.178, lng: 2.067 },
+      { nom: 'Marché de Malanville', ville: 'Malanville', lat: 11.868, lng: 3.385 },
     ],
     cultures: 'coton, maïs, manioc, igname, ananas, anacarde, noix de palme, soja, riz, niébé',
     hdxId: 'wfp-food-prices-for-benin', wfp: 'inconnu',
@@ -133,15 +134,15 @@ export const COUNTRIES_DATA: Country[] = [
     lat: 9.3, lng: 2.3,
   },
   {
-    code: 'BF', nom: 'Burkina Faso', nomEn: 'Burkina Faso', flag: '🇧🇫',
+    code: 'BF', nom: 'Burkina Faso', nomEn: 'Burkina Faso',
     devise: 'XOF', deviseLabel: 'FCFA', indicatif: '+226',
     regions: ['Ouagadougou', 'Bobo-Dioulasso', 'Koudougou', 'Ouahigouya', 'Banfora', 'Fada N\'Gourma', 'Dédougou', 'Kaya', 'Dori', 'Tenkodogo', 'Gaoua', 'Ziniaré', 'Manga'],
     marches: [
-      { nom: 'Rood Woko', ville: 'Ouagadougou' },
-      { nom: 'Marché de Bobo-Dioulasso', ville: 'Bobo-Dioulasso' },
-      { nom: 'Marché de Koudougou', ville: 'Koudougou' },
-      { nom: 'Marché de Ouahigouya', ville: 'Ouahigouya' },
-      { nom: 'Marché de Fada N\'Gourma', ville: 'Fada N\'Gourma' },
+      { nom: 'Rood Woko', ville: 'Ouagadougou', lat: 12.371, lng: -1.52 },
+      { nom: 'Marché de Bobo-Dioulasso', ville: 'Bobo-Dioulasso', lat: 11.177, lng: -4.298 },
+      { nom: 'Marché de Koudougou', ville: 'Koudougou', lat: 12.253, lng: -2.363 },
+      { nom: 'Marché de Ouahigouya', ville: 'Ouahigouya', lat: 13.583, lng: -2.422 },
+      { nom: 'Marché de Fada N\'Gourma', ville: 'Fada N\'Gourma', lat: 12.061, lng: 0.358 },
     ],
     cultures: 'sorgho, mil, maïs, riz, coton, sésame, arachide, niébé, karité, oignon, tomate, mangue (Hauts-Bassins)',
     hdxId: 'wfp-food-prices-for-burkina-faso', wfp: 'oui',
@@ -149,16 +150,16 @@ export const COUNTRIES_DATA: Country[] = [
     lat: 12.3, lng: -1.6,
   },
   {
-    code: 'ML', nom: 'Mali', nomEn: 'Mali', flag: '🇲🇱',
+    code: 'ML', nom: 'Mali', nomEn: 'Mali',
     devise: 'XOF', deviseLabel: 'FCFA', indicatif: '+223',
     regions: ['Bamako', 'Kayes', 'Koulikoro', 'Sikasso', 'Ségou', 'Mopti', 'Koutiala', 'San', 'Kati'],
     marches: [
-      { nom: 'Médine', ville: 'Bamako' },
-      { nom: 'Marché de Sikasso', ville: 'Sikasso' },
-      { nom: 'Marché de Ségou', ville: 'Ségou' },
-      { nom: 'Marché de Mopti', ville: 'Mopti' },
-      { nom: 'Marché de Kayes', ville: 'Kayes' },
-      { nom: 'Marché de Koutiala', ville: 'Koutiala' },
+      { nom: 'Médine', ville: 'Bamako', lat: 12.64, lng: -8.003 },
+      { nom: 'Marché de Sikasso', ville: 'Sikasso', lat: 11.318, lng: -5.667 },
+      { nom: 'Marché de Ségou', ville: 'Ségou', lat: 13.432, lng: -6.216 },
+      { nom: 'Marché de Mopti', ville: 'Mopti', lat: 14.484, lng: -4.183 },
+      { nom: 'Marché de Kayes', ville: 'Kayes', lat: 14.447, lng: -11.445 },
+      { nom: 'Marché de Koutiala', ville: 'Koutiala', lat: 12.392, lng: -5.465 },
     ],
     cultures: 'mil, sorgho, maïs, riz (Office du Niger), coton (Sikasso, Koutiala), arachide, niébé, karité, mangue, oignon (échalote), élevage',
     hdxId: 'wfp-food-prices-for-mali', wfp: 'oui',
