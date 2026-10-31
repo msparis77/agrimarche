@@ -56,6 +56,12 @@ function paysDe(p: { pays?: string | null; ville?: string }): string {
   return parVille ? parVille.nom : 'Sénégal'
 }
 
+// Lien de la source d'un relevé web (inscrit dans la description par l'agent collecteur)
+function lienSource(description?: string): string {
+  const m = (description || '').match(/https?:\/\/[^\s]+/)
+  return m ? m[0] : ''
+}
+
 const MOIS = ['janv.', 'févr.', 'mars', 'avr.', 'mai', 'juin', 'juil.', 'août', 'sept.', 'oct.', 'nov.', 'déc.']
 function moisAnnee(periode?: string): string {
   if (!periode) return ''
@@ -178,6 +184,10 @@ export default function MarchePage() {
             <span className="flex items-center gap-1">
               <span className="bg-green-100 text-green-700 font-bold px-2 py-0.5 rounded-full">Terrain</span>
               Prix signalés par les acteurs
+            </span>
+            <span className="flex items-center gap-1">
+              <span className="bg-purple-100 text-purple-700 font-bold px-2 py-0.5 rounded-full">Relevé web</span>
+              Collecté automatiquement, source citée
             </span>
             <span className="flex items-center gap-1">
               <span className="bg-gray-100 text-gray-500 font-bold px-2 py-0.5 rounded-full">Estimation</span>
@@ -380,16 +390,19 @@ export default function MarchePage() {
                               <div>
                                 <div className="flex items-center gap-2">
                                   <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${
-                                    p.source === 'FAO' ? 'bg-blue-100 text-blue-700' : p.source === 'Estimation' ? 'bg-gray-100 text-gray-500' : 'bg-green-100 text-green-700'
+                                    p.source === 'FAO' ? 'bg-blue-100 text-blue-700' : p.source === 'Web' ? 'bg-purple-100 text-purple-700' : p.source === 'Estimation' ? 'bg-gray-100 text-gray-500' : 'bg-green-100 text-green-700'
                                   }`}>
-                                    {p.source === 'FAO' ? 'Officiel' : p.source || 'Terrain'}
+                                    {p.source === 'FAO' ? 'Officiel' : p.source === 'Web' ? 'Relevé web' : p.source || 'Terrain'}
                                   </span>
                                   <span className="text-sm text-gray-600">
                                     📍 {p.ville}{!paysChoisi && paysDe(p) !== 'Sénégal' ? ` (${paysDe(p)})` : ''}
                                   </span>
                                 </div>
                                 <div className="text-xs text-gray-400 mt-0.5">{p.type_vendeur || p.vendeur}</div>
-                                <div className="text-[11px] text-gray-400">Relevé : {p.source === 'FAO' ? moisAnnee(p.periode) : new Date(p.created_at).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' })}</div>
+                                <div className="text-[11px] text-gray-400">Relevé : {p.source === 'FAO' ? moisAnnee(p.periode) : p.source === 'Web' && p.periode ? new Date(p.periode).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' }) : new Date(p.created_at).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' })}</div>
+                                {p.source === 'Web' && lienSource(p.description) && (
+                                  <div className="text-[11px] text-purple-600">Collecté sur {p.vendeur} · <a href={lienSource(p.description)} target="_blank" rel="noopener noreferrer" className="underline">voir la source</a></div>
+                                )}
                                 {p.source === 'FAO' && estAncien(p.periode) && (
                                   <div className="text-[11px] text-amber-600 font-semibold mt-0.5">⚠️ Relevé de {moisAnnee(p.periode)} (ancien)</div>
                                 )}

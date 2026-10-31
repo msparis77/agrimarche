@@ -3,6 +3,10 @@
     {
       "path": "/api/cron/fao-prices",
       "schedule": "0 6 * * 1"
+    },
+    {
+      "path": "/api/cron/collecte-prix",
+      "schedule": "30 7 * * *"
     }
   ]
 }
