@@ -114,7 +114,7 @@ export const COUNTRIES_DATA: Country[] = [
       { nom: 'Marché de San-Pédro', ville: 'San-Pédro', lat: 4.749, lng: -6.636 },
     ],
     cultures: 'cacao, café, anacarde (noix de cajou), hévéa, palmier à huile, igname, manioc, banane plantain, riz, maïs, coton (nord)',
-    collecteAuto: "Prix relevés à Abidjan collectés chaque jour sur Fratmat (Conseil national de lutte contre la vie chère).",
+    collecteAuto: "Prix moyens hebdomadaires (Abidjan et intérieur du pays) collectés automatiquement dans la note de conjoncture de l'OCPV, Ministère du Commerce.",
     hdxId: 'wfp-food-prices-for-cote-divoire', wfp: 'ancien',
     wfpNote: "Jeu de données WFP/HDX existant mais ancien (dernières données : octobre 2018).",
     lat: 7.6, lng: -5.5,

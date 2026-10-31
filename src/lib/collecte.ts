@@ -6,6 +6,7 @@
 
 export interface SourcePrix {
   id: string
+  type: 'html' | 'pdf'    // article web ou document PDF
   pays: string            // nom du pays tel que stocké en base
   nom: string             // affiché à l'écran : « Collecté sur … »
   indexUrls: string[]     // pages où chercher les derniers articles
@@ -19,6 +20,7 @@ export interface SourcePrix {
 export const SOURCES_PRIX: SourcePrix[] = [
   {
     id: 'ci-fratmat-cnlvc',
+    type: 'html',
     pays: "Côte d'Ivoire",
     nom: 'Fratmat (relevé du Conseil national de lutte contre la vie chère)',
     indexUrls: ['https://www.fratmat.info/economie', 'https://www.fratmat.info/'],
@@ -29,6 +31,21 @@ export const SOURCES_PRIX: SourcePrix[] = [
     maxAgeJours: 10,
   },
 ]
+
+// Notes de conjoncture hebdomadaires de l'OCPV (Ministère du Commerce de Côte d'Ivoire) :
+// prix moyens par produit pour Abidjan et pour l'intérieur du pays, en FCFA/kg.
+SOURCES_PRIX.push({
+  id: 'ci-ocpv-hebdo',
+  type: 'pdf',
+  pays: "Côte d'Ivoire",
+  nom: "OCPV, Ministère du Commerce de Côte d'Ivoire (note de conjoncture hebdomadaire)",
+  indexUrls: ['https://www.ocpv-ci.com/', 'https://www.ocpv-ci.com/doc/note_de_conjoncture/2026/'],
+  patternLien: /\/doc\/note_de_conjoncture\/[^"'\s<>]*\.pdf/gi,
+  villeParDefaut: 'Abidjan',
+  devise: 'XOF',
+  maxArticles: 2,
+  maxAgeJours: 21,
+})
 
 export const USER_AGENT = 'AgriMarcheBot/1.0 (+https://agrimarche.vercel.app; collecte de prix publics)'
 
@@ -92,6 +109,24 @@ export function extraireLiensArticles(html: string, src: SourcePrix, baseUrl: st
   return Array.from(trouves.entries()).sort((a, b) => b[0] - a[0]).slice(0, max).map(([, u]) => u)
 }
 
+// ── Découverte des notes PDF (nom du fichier : ..._N_43_2026.pdf, ..._N_08_FEVRIER_2026.pdf) ──
+// Tri par année puis numéro de semaine décroissants.
+export function extraireLiensPdf(html: string, src: SourcePrix, baseUrl: string, max: number): string[] {
+  const re = new RegExp(src.patternLien.source, 'gi')
+  const trouves = new Map<string, number>()
+  let m: RegExpExecArray | null
+  while ((m = re.exec(html)) !== null) {
+    let url: string
+    try { url = new URL(m[0].replace(/ /g, '%20'), baseUrl).toString() } catch { continue }
+    const nom = decodeURIComponent(url.split('/').pop() || '')
+    const semaine = Number((nom.match(/N[_°\s]*0*(\d{1,2})/i) || [])[1])
+    const annee = Number((url.match(/\/(20\d{2})\//) || nom.match(/(20\d{2})/) || [])[1])
+    if (!isFinite(semaine) || !isFinite(annee)) continue
+    trouves.set(url, annee * 100 + semaine)
+  }
+  return Array.from(trouves.entries()).sort((a, b) => b[1] - a[1]).slice(0, max).map(([u]) => u)
+}
+
 // ── Normalisation des noms de produits (noms d'AgriMarché) ──────────────────
 const REGLES_PRODUITS: [RegExp, string][] = [
   [/patate douce/i, 'Patate douce'], [/igname/i, 'Igname'], [/manioc|attiéké?/i, 'Manioc'],
@@ -118,6 +153,9 @@ export function normaliserProduit(brut: string): string {
 export interface ExtraitPrix {
   produit_source: string
   prix: number
+  marche?: string | null            // « Abidjan » ou « Intérieur » (notes PDF)
+  prix_precedent?: number | null    // semaine précédente (contrôle de cohérence)
+  variation_pct?: number | null     // variation publiée, en %
   unite?: string | null
   devise?: string | null
   tendance?: string | null
@@ -137,7 +175,11 @@ export function parserReponseModele(texte: string): Extraction | null {
     if (!j || !Array.isArray(j.prix)) return null
     const prix: ExtraitPrix[] = j.prix
       .filter((p: any) => p && typeof p.produit_source === 'string' && isFinite(Number(p.prix)))
-      .map((p: any) => ({ ...p, prix: Number(p.prix) }))
+      .map((p: any) => ({
+        ...p, prix: Number(p.prix),
+        prix_precedent: p.prix_precedent != null && isFinite(Number(p.prix_precedent)) ? Number(p.prix_precedent) : null,
+        variation_pct: p.variation_pct != null && isFinite(Number(p.variation_pct)) ? Number(p.variation_pct) : null,
+      }))
     return {
       date_releve: typeof j.date_releve === 'string' ? j.date_releve : null,
       marche: typeof j.marche === 'string' && j.marche.trim() ? j.marche.trim() : null,
@@ -149,14 +191,32 @@ export function parserReponseModele(texte: string): Extraction | null {
 // ── Contrôles anti-invention ────────────────────────────────────────────────
 // Le prix doit apparaître dans le texte de la page, avec ou sans séparateur de milliers
 // (« 1500 », « 1 500 », « 1.500 »).
-export function prixPresentDansTexte(texte: string, prix: number): boolean {
-  let t = texte
-  // retire les séparateurs de milliers entre groupes de 3 chiffres, jusqu'à stabilité
-  for (let i = 0; i < 3; i++) {
-    t = t.replace(/(\d)[\s\u00a0\u202f.,](?=\d{3}(?!\d))/g, '$1')
+export function prixPresentDansTexte(texte: string, prix: number, tableau = false): boolean {
+  // tableau=false (articles) : « 500 » n'est pas accepté dans « 1 500 ».
+  // tableau=true (PDF) : des colonnes voisines (« 400 410 ») sont lues séparément ; les contrôles
+  // prix précédent + variation protègent alors contre les erreurs.
+  // Le nombre doit apparaître tel quel, ou avec un séparateur de milliers (« 1 000 », « 1.000 », « 1,000 »).
+  // On ne fusionne jamais le texte : dans un tableau, « 400 410 » sont deux colonnes, pas « 400410 ».
+  let motif: string
+  if (Number.isInteger(prix)) {
+    const chiffres = String(prix)
+    const groupes: string[] = []
+    for (let i = chiffres.length; i > 0; i -= 3) groupes.unshift(chiffres.slice(Math.max(0, i - 3), i))
+    motif = groupes.join('[\\s\\u00a0\\u202f.,]?')
+  } else {
+    motif = String(prix).replace('.', '[.,]')
   }
-  const motif = Number.isInteger(prix) ? String(prix) : String(prix).replace('.', '[.,]')
-  return new RegExp(`(^|[^\\d.,])${motif}($|[^\\d])`).test(t)
+  // ni chiffre collé avant/après, ni suite décimale (« 410,5 » ne valide pas 410)
+  const avant = tableau ? '(?<![\\d]|\\d[.,])' : '(?<![\\d]|\\d[.,\\s\\u00a0\\u202f])'
+  return new RegExp(`${avant}(?:${motif})(?!\\d|[.,]\\d)`).test(texte)
+}
+
+// Contrôle de cohérence : (prix − précédent) / précédent doit correspondre à la variation publiée.
+// Un décalage de ligne ou de colonne dans un tableau rend ce contrôle faux, donc le prix est rejeté.
+export function variationCoherente(prix: number, precedent?: number | null, variationPct?: number | null, tolerance = 1.5): boolean {
+  if (precedent == null || variationPct == null || !(precedent > 0)) return false
+  const calc = ((prix - precedent) / precedent) * 100
+  return Math.abs(calc - variationPct) <= tolerance
 }
 
 export function dateValide(iso: string | null, maxAgeJours: number, maintenant = new Date()): string | null {
@@ -202,3 +262,13 @@ RÈGLES STRICTES :
 - Pour chaque prix : "produit_source" (nom exact écrit dans le texte), "prix" (nombre, sans espaces ni devise), "unite" (kg, litre, tas…), "devise" (FCFA, XOF…), "tendance" (hausse/baisse/stable ou null), "citation" (la phrase ou ligne exacte du texte).
 - Réponds UNIQUEMENT par un objet JSON valide, sans texte autour :
 {"date_releve":"AAAA-MM-JJ"|null,"marche":string|null,"prix":[{"produit_source":string,"prix":number,"unite":string,"devise":string,"tendance":string|null,"citation":string}]}`
+
+export const PROMPT_EXTRACTION_PDF = `Tu lis une note de conjoncture hebdomadaire sur les prix des produits vivriers en Côte d'Ivoire (document PDF).
+Extrais UNIQUEMENT les tableaux de PRIX MOYENS de la semaine en cours (colonnes du type « Prix moyen S(n-1) », « Prix moyen S(n) », « Variation (%) »), pour « Abidjan » et pour « l'intérieur du pays ». Ignore les tableaux de prix mini-maxi.
+RÈGLES STRICTES :
+- N'écris QUE des valeurs lues dans le document. N'invente, ne calcule et n'arrondis rien.
+- Pour chaque produit : "produit_source" (nom exact du tableau), "marche" ("Abidjan" ou "Intérieur"), "prix" (prix moyen de la semaine en cours S(n), nombre), "prix_precedent" (prix moyen de la semaine précédente S(n-1), nombre), "variation_pct" (variation publiée en %, nombre signé), "unite" ("kg" sauf mention contraire), "devise" ("FCFA").
+- Si une des trois valeurs (prix, prix précédent, variation) est absente ou illisible pour un produit, ignore ce produit.
+- "date_releve" : le DERNIER jour de la semaine couverte, au format AAAA-MM-JJ (ex. « du 19 au 25 octobre 2026 » → "2026-10-25").
+- Réponds UNIQUEMENT par un objet JSON valide, sans texte autour :
+{"date_releve":"AAAA-MM-JJ"|null,"marche":null,"prix":[{"produit_source":string,"marche":"Abidjan"|"Intérieur","prix":number,"prix_precedent":number,"variation_pct":number,"unite":"kg","devise":"FCFA"}]}`
