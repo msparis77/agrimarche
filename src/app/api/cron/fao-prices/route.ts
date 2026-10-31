@@ -230,13 +230,13 @@ export async function GET(req: NextRequest) {
         const v = 1 + ((((semaine * 7 + i * 13) % 17) - 8) / 200)
         return {
           produit: p.produit, prix: Math.round(p.prix * v), unite: p.unite,
-          ville: p.ville, pays: 'Sénégal', source: 'FAO',
-          periode: aujourd_hui, vendeur: 'WFP/OCHA HDX',
-          description: `${p.produit} — ${p.ville} (données enrichies Sénégal 2026)`,
+          ville: p.ville, pays: 'Sénégal', source: 'Estimation',
+          periode: aujourd_hui, vendeur: 'Estimation AgriMarché',
+          description: `${p.produit} — ${p.ville} (estimation, pas un relevé officiel)`,
         }
       })
       statut = 'repli_estimation'
-      message = 'HDX indisponible : estimations Sénégal utilisées (pas des relevés WFP).'
+      message = 'HDX indisponible : estimations Sénégal utilisées, affichées comme « Estimation » (pas des relevés WFP).'
     }
 
     if (!rows) {
@@ -247,7 +247,7 @@ export async function GET(req: NextRequest) {
     }
 
     // On ne remplace que les lignes FAO de CE pays (le Sénégal inclut les anciennes lignes sans pays)
-    let del = supabase.from('prix_marche').delete({ count: 'exact' }).eq('source', 'FAO')
+    let del = supabase.from('prix_marche').delete({ count: 'exact' }).in('source', ['FAO', 'Estimation'])
     del = c.nom === 'Sénégal' ? del.or('pays.eq.Sénégal,pays.is.null') : del.eq('pays', c.nom)
     const { error: deleteError, count: deleted } = await del
     if (deleteError) logs.push(`[${c.nom}] Avertissement suppression : ${deleteError.message}`)
