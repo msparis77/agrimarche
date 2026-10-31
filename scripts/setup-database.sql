@@ -234,6 +234,7 @@ CREATE TABLE forum_comments (
 -- 9. PRIX_MARCHE
 -- ────────────────────────────────────────────────────────────────
 DROP TABLE IF EXISTS prix_marche CASCADE;
+-- (colonnes pays, source, periode : voir scripts/migration-pays.sql)
 
 CREATE TABLE prix_marche (
   id             UUID DEFAULT gen_random_uuid() PRIMARY KEY,

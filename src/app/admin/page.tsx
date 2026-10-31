@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { RefreshCw, Lock, ShieldCheck, Users, Megaphone, MessageSquare, LogOut } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
+import { getDeviseLabel } from '@/lib/countries'
 
 // ── PIN Lock ──────────────────────────────────────────────────────
 function PinLock({ onUnlock }: { onUnlock: () => void }) {
@@ -559,7 +560,7 @@ function PrixSection({ prix, exportCSV, triggerCron, prixFiltreProduit, setPrixF
               </svg>
               <div className="flex justify-between text-xs text-gray-400 mt-1 px-3">
                 <span>{donnees[0] ? new Date(donnees[0].created_at).toLocaleDateString('fr-FR', { month: 'short', day: 'numeric' }) : ''}</span>
-                <span className="font-semibold text-gray-600">FCFA/{donnees[0]?.unite || 'kg'}</span>
+                <span className="font-semibold text-gray-600">{prixFiltrePays === 'Tous' ? 'FCFA' : getDeviseLabel(prixFiltrePays)}/{donnees[0]?.unite || 'kg'}</span>
                 <span>{donnees[donnees.length - 1] ? new Date(donnees[donnees.length - 1].created_at).toLocaleDateString('fr-FR', { month: 'short', day: 'numeric' }) : ''}</span>
               </div>
             </div>
@@ -571,7 +572,7 @@ function PrixSection({ prix, exportCSV, triggerCron, prixFiltreProduit, setPrixF
       {statsComparatif.length > 0 && (
         <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
           <div className="px-6 py-4 border-b border-gray-100">
-            <h3 className="font-bold text-gray-900">Comparatif FAO vs Terrain (prix moyens FCFA/kg)</h3>
+            <h3 className="font-bold text-gray-900">Comparatif FAO vs Terrain (prix moyens, monnaie locale/kg — filtrer par pays)</h3>
             <p className="text-xs text-gray-500 mt-0.5">Écart : différence entre prix signalés sur le terrain et prix officiels FAO</p>
           </div>
           <div className="overflow-x-auto">

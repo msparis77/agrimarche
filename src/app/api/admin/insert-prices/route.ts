@@ -184,11 +184,12 @@ export async function POST(req: NextRequest) {
   const aujourd_hui = new Date().toISOString().split('T')[0]
   const logs: string[] = []
 
-  // Supprimer toutes les anciennes lignes FAO avant d'insérer
+  // Supprimer les anciennes lignes FAO du Sénégal avant d'insérer
   const { error: deleteError, count: deleted } = await supabase
     .from('prix_marche')
     .delete({ count: 'exact' })
     .eq('source', 'FAO')
+    .or('pays.eq.Sénégal,pays.is.null') // ne touche pas aux prix des autres pays
 
   if (deleteError) {
     logs.push(`Avertissement suppression : ${deleteError.message}`)

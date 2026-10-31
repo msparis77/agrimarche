@@ -1,9 +1,16 @@
 import Anthropic from '@anthropic-ai/sdk'
 import { NextRequest, NextResponse } from 'next/server'
+import { COUNTRIES_DATA } from '@/lib/countries'
 
 const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
 
-const SYSTEM_PROMPT = `Tu es AgriAssistant, un expert agricole spécialisé en Afrique de l'Ouest (Sénégal, Gambie, Guinée).
+const PAYS_COUVERTS = COUNTRIES_DATA.map(c => c.nom).join(', ')
+const CONTEXTE_PAYS = COUNTRIES_DATA.map(c => `- ${c.nom} : ${c.cultures}`).join('\n')
+
+const SYSTEM_PROMPT = `Tu es AgriAssistant, un expert agricole spécialisé en Afrique de l'Ouest (${PAYS_COUVERTS}).
+Cultures et contexte par pays :
+${CONTEXTE_PAYS}
+Adapte tes conseils au pays de la personne (climat, saison des pluies, cultures dominantes, monnaie locale). Si le pays n'est pas précisé et que cela change ta réponse, pose une seule question courte.
 Tu aides les agriculteurs, producteurs, transporteurs et acheteurs avec :
 - Diagnostic de maladies des plantes à partir de photos
 - Conseils techniques agricoles adaptés au climat local

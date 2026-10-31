@@ -6,8 +6,9 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import { useLang } from '@/hooks/useLang'
+import { COUNTRY_NAMES, getRegions as getRegionsDuPays } from '@/lib/countries'
 
-const COUNTRIES = ['Sénégal', 'Gambie', 'Guinée', 'France', 'Autre']
+const COUNTRIES = [...COUNTRY_NAMES, 'France', 'Autre']
 
 const PRODUITS_AGRICOLES = [
   'Riz', 'Mil', 'Maïs', 'Sorgho', 'Arachide',
@@ -30,9 +31,6 @@ const ZONES = [
   'International (entre pays)',
 ]
 
-const REGIONS_SENEGAL = ['Dakar', 'Thiès', 'Kaolack', 'Ziguinchor', 'Saint-Louis', 'Tambacounda', 'Kolda', 'Fatick', 'Kaffrine', 'Kédougou', 'Louga', 'Matam', 'Sédhiou', 'Diourbel']
-const REGIONS_GAMBIE = ['Banjul', 'Brikama', 'Kanifing', 'Basse', 'Janjanbureh', 'Kerewan', 'Kuntaur', 'Mansakonko']
-const REGIONS_GUINEE = ['Conakry', 'Labé', 'Kankan', 'Kindia', 'Boké', 'Faranah', 'Mamou', "N'Zérékoré"]
 
 type Role = 'producteur' | 'acheteur' | 'transformateur' | 'transporteur'
 
@@ -76,12 +74,7 @@ export default function RegisterPage() {
     acceptCgv: false,
   })
 
-  const getRegions = () => {
-    if (form.pays === 'Sénégal') return REGIONS_SENEGAL
-    if (form.pays === 'Gambie') return REGIONS_GAMBIE
-    if (form.pays === 'Guinée') return REGIONS_GUINEE
-    return []
-  }
+  const getRegions = () => getRegionsDuPays(form.pays)
 
   const toggleItem = (field: string, value: string) => {
     const current = (form as any)[field] as string[]
