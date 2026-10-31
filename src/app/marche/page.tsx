@@ -226,7 +226,7 @@ export default function MarchePage() {
                 <label className="text-xs font-semibold text-gray-500 uppercase mb-1 block">Pays *</label>
                 <select value={form.pays} onChange={e => setForm({ ...form, pays: e.target.value, ville: '' })}
                   className="w-full border border-gray-200 rounded-xl px-4 py-3 outline-none focus:border-green-500 bg-white">
-                  {COUNTRIES_DATA.map(c => <option key={c.code} value={c.nom}>{c.flag} {c.nom}</option>)}
+                  {COUNTRIES_DATA.map(c => <option key={c.code} value={c.nom}>{c.nom}</option>)}
                 </select>
               </div>
               <div>
