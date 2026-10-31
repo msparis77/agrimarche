@@ -74,16 +74,29 @@ export default function HomePage() {
     return map[produit] || '📦'
   }
 
-  // Un seul prix par produit (FAO en priorité, sinon Terrain)
+  // Un seul prix par produit : relevé officiel (FAO) > Terrain > Estimation
+  const rang = (s?: string) => (s === 'FAO' ? 3 : s === 'Estimation' ? 1 : 2)
   const prixParProduit = Object.values(
     prix.reduce((acc: Record<string, any>, p) => {
-      if (!acc[p.produit] || p.source === 'FAO') acc[p.produit] = p
+      if (!acc[p.produit] || rang(p.source) > rang(acc[p.produit].source)) acc[p.produit] = p
       return acc
     }, {})
   )
 
+  const MOIS = ['janv.', 'févr.', 'mars', 'avr.', 'mai', 'juin', 'juil.', 'août', 'sept.', 'oct.', 'nov.', 'déc.']
+  // Date du relevé : mois pour un relevé officiel, jour pour un prix terrain
+  const dateReleve = (p: any) => {
+    if (p.source === 'FAO' && p.periode) {
+      const [a, m] = String(p.periode).split('-')
+      return `${MOIS[Number(m) - 1] ?? ''} ${a}`.trim()
+    }
+    const d = new Date(p.created_at)
+    return isNaN(d.getTime()) ? '' : d.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' })
+  }
+  const etiquette = (s?: string) => (s === 'FAO' ? 'Officiel' : s === 'Estimation' ? 'Estimation' : 'Terrain')
+
   const tickerItems = prixParProduit.length > 0
-    ? prixParProduit.filter((p: any) => p.prix != null).map((p: any) => `${getEmojiproduit(p.produit)} ${p.produit} ${Number(p.prix).toLocaleString('fr-FR')} ${getDeviseCourte(p.pays)}/${p.unite || 'kg'}${p.source === 'FAO' ? ' ★FAO' : ''}`)
+    ? prixParProduit.filter((p: any) => p.prix != null).map((p: any) => `${getEmojiproduit(p.produit)} ${p.produit} ${Number(p.prix).toLocaleString('fr-FR')} ${getDeviseCourte(p.pays)}/${p.unite || 'kg'} (${etiquette(p.source)}${dateReleve(p) ? ', ' + dateReleve(p) : ''})`)
     : ['🌾 Riz 450 F/kg', '🌽 Maïs 280 F/kg', '🥜 Arachide 320 F/kg', '🧅 Oignon 200 F/kg', '🍅 Tomate 350 F/kg']
 
   return (
@@ -194,7 +207,7 @@ export default function HomePage() {
           <section>
             <div className="flex items-center justify-between mb-3">
               <h2 className="text-lg font-extrabold text-gray-900 flex items-center gap-2">
-                <TrendingUp size={18} className="text-[#f5c842]" /> Cours du jour
+                <TrendingUp size={18} className="text-[#f5c842]" /> Derniers prix relevés
               </h2>
               <Link href="/marche" className="flex items-center gap-1 text-[#166534] text-sm font-semibold hover:text-green-800 transition">
                 Voir tout <ChevronRight size={15} />
@@ -208,11 +221,11 @@ export default function HomePage() {
                     <div>
                       <div className="flex items-center gap-1.5">
                         <p className="font-semibold text-sm text-gray-900">{p.produit}</p>
-                        <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full leading-none ${p.source === 'FAO' ? 'bg-blue-100 text-blue-600' : 'bg-green-100 text-green-700'}`}>
-                          {p.source === 'FAO' ? 'FAO' : 'Terrain'}
+                        <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full leading-none ${p.source === 'FAO' ? 'bg-blue-100 text-blue-600' : p.source === 'Estimation' ? 'bg-gray-100 text-gray-500' : 'bg-green-100 text-green-700'}`}>
+                          {etiquette(p.source)}
                         </span>
                       </div>
-                      <p className="text-xs text-gray-400">📍 {p.ville || p.pays || '—'}</p>
+                      <p className="text-xs text-gray-400">📍 {p.ville || p.pays || '—'}{dateReleve(p) ? ` · ${dateReleve(p)}` : ''}</p>
                     </div>
                   </div>
                   <div className="text-right">

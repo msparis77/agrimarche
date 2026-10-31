@@ -188,7 +188,7 @@ export async function POST(req: NextRequest) {
   const { error: deleteError, count: deleted } = await supabase
     .from('prix_marche')
     .delete({ count: 'exact' })
-    .eq('source', 'FAO')
+    .in('source', ['FAO', 'Estimation'])
     .or('pays.eq.Sénégal,pays.is.null') // ne touche pas aux prix des autres pays
 
   if (deleteError) {
@@ -206,16 +206,16 @@ export async function POST(req: NextRequest) {
     const v = 1 + ((((semaine * 7 + i * 13) % 17) - 8) / 200)
     return {
       produit: p.produit, prix: Math.round(p.prix * v), unite: p.unite,
-      ville: p.ville, pays: 'Sénégal', source: 'FAO',
-      periode: aujourd_hui, vendeur: 'WFP/OCHA HDX',
-      description: `${p.produit} — ${p.ville} (${p.categorie} · données enrichies 2026)`,
+      ville: p.ville, pays: 'Sénégal', source: 'Estimation',
+      periode: aujourd_hui, vendeur: 'Estimation AgriMarché',
+      description: `${p.produit} — ${p.ville} (${p.categorie} · estimation, pas un relevé officiel)`,
     }
   })
 
   const rows = liveRows ?? staticRows
   const sourceLabel = liveRows
     ? `OCHA HDX live (${liveRows.length} entrées)`
-    : `Données enrichies Sénégal 2026 (${staticRows.length} produits · WFP/ANSD/BCEAO)`
+    : `Estimations Sénégal (${staticRows.length} produits) — affichées comme « Estimation », pas comme relevés officiels`
 
   const { data, error } = await supabase.from('prix_marche').insert(rows).select('id')
 

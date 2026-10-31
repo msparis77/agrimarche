@@ -172,12 +172,16 @@ export default function MarchePage() {
           <p className="text-gray-500 text-sm mt-1">{COUNTRY_NAMES.join(' · ')}</p>
           <div className="flex items-center justify-center gap-4 mt-2 text-xs">
             <span className="flex items-center gap-1">
-              <span className="bg-blue-100 text-blue-700 font-bold px-2 py-0.5 rounded-full">FAO</span>
-              Prix officiels WFP/FAO
+              <span className="bg-blue-100 text-blue-700 font-bold px-2 py-0.5 rounded-full">Officiel</span>
+              Relevés WFP/FAO (mensuels)
             </span>
             <span className="flex items-center gap-1">
               <span className="bg-green-100 text-green-700 font-bold px-2 py-0.5 rounded-full">Terrain</span>
               Prix signalés par les acteurs
+            </span>
+            <span className="flex items-center gap-1">
+              <span className="bg-gray-100 text-gray-500 font-bold px-2 py-0.5 rounded-full">Estimation</span>
+              Pas un relevé
             </span>
           </div>
         </div>
@@ -366,7 +370,7 @@ export default function MarchePage() {
                           )}
                           {faoItem && (
                             <span className="ml-auto text-xs text-blue-600 font-semibold">
-                              ref. FAO {Number(faoItem.prix).toLocaleString('fr-FR')} {getDeviseCourte(paysDe(faoItem))}/{faoItem.unite}
+                              réf. officielle {Number(faoItem.prix).toLocaleString('fr-FR')} {getDeviseCourte(paysDe(faoItem))}/{faoItem.unite}
                             </span>
                           )}
                         </div>
@@ -376,15 +380,16 @@ export default function MarchePage() {
                               <div>
                                 <div className="flex items-center gap-2">
                                   <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${
-                                    p.source === 'FAO' ? 'bg-blue-100 text-blue-700' : 'bg-green-100 text-green-700'
+                                    p.source === 'FAO' ? 'bg-blue-100 text-blue-700' : p.source === 'Estimation' ? 'bg-gray-100 text-gray-500' : 'bg-green-100 text-green-700'
                                   }`}>
-                                    {p.source || 'Terrain'}
+                                    {p.source === 'FAO' ? 'Officiel' : p.source || 'Terrain'}
                                   </span>
                                   <span className="text-sm text-gray-600">
                                     📍 {p.ville}{!paysChoisi && paysDe(p) !== 'Sénégal' ? ` (${paysDe(p)})` : ''}
                                   </span>
                                 </div>
                                 <div className="text-xs text-gray-400 mt-0.5">{p.type_vendeur || p.vendeur}</div>
+                                <div className="text-[11px] text-gray-400">Relevé : {p.source === 'FAO' ? moisAnnee(p.periode) : new Date(p.created_at).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' })}</div>
                                 {p.source === 'FAO' && estAncien(p.periode) && (
                                   <div className="text-[11px] text-amber-600 font-semibold mt-0.5">⚠️ Relevé de {moisAnnee(p.periode)} (ancien)</div>
                                 )}
