@@ -113,6 +113,13 @@ export default function CountryMap({ selected, onSelect, actionLabel, onAction }
             <p className="mt-0.5">{pays.wfpNote}</p>
           </div>
 
+          {pays.collecteAuto && (
+            <div className="mt-2 rounded-xl px-3 py-2 text-xs bg-purple-50 text-purple-700">
+              <p className="font-bold">Collecte automatique quotidienne</p>
+              <p className="mt-0.5">{pays.collecteAuto}</p>
+            </div>
+          )}
+
           {onAction && actionLabel && (
             <button onClick={() => onAction(pays)}
               className="mt-3 w-full bg-green-700 text-white font-bold py-2.5 rounded-xl text-sm hover:bg-green-600 transition">

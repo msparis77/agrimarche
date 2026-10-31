@@ -74,11 +74,16 @@ export default function HomePage() {
     return map[produit] || '📦'
   }
 
-  // Un seul prix par produit : relevé officiel (FAO) > Terrain > Estimation
-  const rang = (s?: string) => (s === 'FAO' ? 3 : s === 'Estimation' ? 1 : 2)
+  // Un seul prix par produit : jamais une estimation si on a mieux, puis le plus récent
+  const dateDe = (p: any) => new Date(p.source === 'FAO' || p.source === 'Web' ? (p.periode || p.created_at) : p.created_at).getTime() || 0
+  const meilleur = (a: any, b: any) => {
+    const sa = a.source === 'Estimation' ? 0 : 1, sb = b.source === 'Estimation' ? 0 : 1
+    if (sa !== sb) return sb > sa ? b : a
+    return dateDe(b) > dateDe(a) ? b : a
+  }
   const prixParProduit = Object.values(
     prix.reduce((acc: Record<string, any>, p) => {
-      if (!acc[p.produit] || rang(p.source) > rang(acc[p.produit].source)) acc[p.produit] = p
+      acc[p.produit] = acc[p.produit] ? meilleur(acc[p.produit], p) : p
       return acc
     }, {})
   )
@@ -86,6 +91,9 @@ export default function HomePage() {
   const MOIS = ['janv.', 'févr.', 'mars', 'avr.', 'mai', 'juin', 'juil.', 'août', 'sept.', 'oct.', 'nov.', 'déc.']
   // Date du relevé : mois pour un relevé officiel, jour pour un prix terrain
   const dateReleve = (p: any) => {
+    if (p.source === 'Web' && p.periode) {
+      return new Date(p.periode).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' })
+    }
     if (p.source === 'FAO' && p.periode) {
       const [a, m] = String(p.periode).split('-')
       return `${MOIS[Number(m) - 1] ?? ''} ${a}`.trim()
@@ -93,7 +101,7 @@ export default function HomePage() {
     const d = new Date(p.created_at)
     return isNaN(d.getTime()) ? '' : d.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' })
   }
-  const etiquette = (s?: string) => (s === 'FAO' ? 'Officiel' : s === 'Estimation' ? 'Estimation' : 'Terrain')
+  const etiquette = (s?: string) => (s === 'FAO' ? 'Officiel' : s === 'Web' ? 'Relevé web' : s === 'Estimation' ? 'Estimation' : 'Terrain')
 
   const tickerItems = prixParProduit.length > 0
     ? prixParProduit.filter((p: any) => p.prix != null).map((p: any) => `${getEmojiproduit(p.produit)} ${p.produit} ${Number(p.prix).toLocaleString('fr-FR')} ${getDeviseCourte(p.pays)}/${p.unite || 'kg'} (${etiquette(p.source)}${dateReleve(p) ? ', ' + dateReleve(p) : ''})`)
@@ -221,7 +229,7 @@ export default function HomePage() {
                     <div>
                       <div className="flex items-center gap-1.5">
                         <p className="font-semibold text-sm text-gray-900">{p.produit}</p>
-                        <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full leading-none ${p.source === 'FAO' ? 'bg-blue-100 text-blue-600' : p.source === 'Estimation' ? 'bg-gray-100 text-gray-500' : 'bg-green-100 text-green-700'}`}>
+                        <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full leading-none ${p.source === 'FAO' ? 'bg-blue-100 text-blue-600' : p.source === 'Web' ? 'bg-purple-100 text-purple-700' : p.source === 'Estimation' ? 'bg-gray-100 text-gray-500' : 'bg-green-100 text-green-700'}`}>
                           {etiquette(p.source)}
                         </span>
                       </div>
