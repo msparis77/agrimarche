@@ -4,6 +4,9 @@ import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { ChevronRight, Package, TrendingUp, MapPin } from 'lucide-react'
 import { supabase, formatPrice } from '@/lib/supabase'
+import CountryMap from '@/components/CountryMap'
+import { getDeviseCourte, NB_PAYS } from '@/lib/countries'
+import { useRouter } from 'next/navigation'
 
 export default function HomePage() {
   const [products, setProducts] = useState<any[]>([])
@@ -11,6 +14,8 @@ export default function HomePage() {
   const [prix, setPrix] = useState<any[]>([])
   const [meteo, setMeteo] = useState<any>(null)
   const [ville, setVille] = useState('Dakar')
+  const [paysCarte, setPaysCarte] = useState('')
+  const router = useRouter()
 
   useEffect(() => {
     supabase
@@ -60,7 +65,7 @@ export default function HomePage() {
     const map: any = {
       'Riz':'🌾','Mil':'🌾','Maïs':'🌽','Sorgho':'🌾','Fonio':'🌾',
       'Arachide':'🥜','Niébé':'🫘','Haricot':'🫘',
-      'Oignon':'🧅','Tomate':'🍅','Gombo':'🥬','Piment':'🌶️','Aubergine':'🍆','Chou':'🥦','Carotte':'🥕','Manioc':'🥔',
+      'Oignon':'🧅','Tomate':'🍅','Gombo':'🥬','Piment':'🌶️','Aubergine':'🍆','Chou':'🥦','Carotte':'🥕','Manioc':'🥔','Igname':'🍠','Patate douce':'🍠','Anacarde':'🥜',
       'Mangue':'🥭','Banane':'🍌','Orange':'🍊','Pastèque':'🍉',
       'Poulet':'🐔','Mouton':'🐑','Bœuf':'🐄','Volaille':'🐔',
       'Thiof':'🐟','Yabou':'🐠','Carpe':'🐟','Poisson':'🐟',
@@ -78,7 +83,7 @@ export default function HomePage() {
   )
 
   const tickerItems = prixParProduit.length > 0
-    ? prixParProduit.filter((p: any) => p.prix != null).map((p: any) => `${getEmojiproduit(p.produit)} ${p.produit} ${Number(p.prix).toLocaleString('fr-FR')} F/${p.unite || 'kg'}${p.source === 'FAO' ? ' ★FAO' : ''}`)
+    ? prixParProduit.filter((p: any) => p.prix != null).map((p: any) => `${getEmojiproduit(p.produit)} ${p.produit} ${Number(p.prix).toLocaleString('fr-FR')} ${getDeviseCourte(p.pays)}/${p.unite || 'kg'}${p.source === 'FAO' ? ' ★FAO' : ''}`)
     : ['🌾 Riz 450 F/kg', '🌽 Maïs 280 F/kg', '🥜 Arachide 320 F/kg', '🧅 Oignon 200 F/kg', '🍅 Tomate 350 F/kg']
 
   return (
@@ -172,6 +177,18 @@ export default function HomePage() {
           )}
         </section>
 
+        {/* PAYS COUVERTS */}
+        <section>
+          <h2 className="text-lg font-extrabold text-white mb-1">🌍 {NB_PAYS} pays couverts</h2>
+          <p className="text-xs text-green-100 mb-3">Choisissez un pays pour voir ses marchés de référence et ses prix.</p>
+          <CountryMap
+            selected={paysCarte}
+            onSelect={setPaysCarte}
+            actionLabel="Voir les prix de ce pays"
+            onAction={c => router.push(`/marche?pays=${encodeURIComponent(c.nom)}`)}
+          />
+        </section>
+
         {/* COURS DU JOUR */}
         {prixParProduit.length > 0 && (
           <section>
@@ -199,7 +216,7 @@ export default function HomePage() {
                     </div>
                   </div>
                   <div className="text-right">
-                    <p className="font-bold text-[#166534] text-sm">{Number(p.prix).toLocaleString('fr-FR')} <span className="text-xs font-normal text-gray-400">F</span></p>
+                    <p className="font-bold text-[#166534] text-sm">{Number(p.prix).toLocaleString('fr-FR')} <span className="text-xs font-normal text-gray-400">{getDeviseCourte(p.pays)}</span></p>
                     <p className="text-xs text-gray-400">/{p.unite}</p>
                   </div>
                 </div>

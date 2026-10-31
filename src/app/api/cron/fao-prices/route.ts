@@ -1,7 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
+import { COUNTRIES_DATA, Country } from '@/lib/countries'
 
-// ── Prix enrichis Sénégal 2026 — Sources : WFP/OCHA HDX, ANSD, BCEAO ───────
+export const maxDuration = 30
+
+// ── Prix de repli SÉNÉGAL uniquement (estimations, utilisées si HDX ne répond pas) ──
+// Attention : ce sont des estimations, pas des relevés WFP. Aucun équivalent n'est
+// créé pour les autres pays : sans données HDX réelles, rien n'est inséré.
 const PRIX_ENRICHIS = [
   // CÉRÉALES
   { produit: 'Riz',            prix: 490,  unite: 'kg',    ville: 'Dakar (Tilène)' },
@@ -92,77 +97,93 @@ const PRIX_ENRICHIS = [
 const COMMODITY_MAP: Record<string, string> = {
   'rice': 'Riz', 'millet': 'Mil', 'pearl millet': 'Mil', 'maize': 'Maïs', 'corn': 'Maïs',
   'sorghum': 'Sorgho', 'fonio': 'Fonio', 'groundnuts': 'Arachide', 'peanuts': 'Arachide',
-  'cowpeas': 'Niébé', 'beans (niebe)': 'Niébé', 'onion': 'Oignon', 'onions': 'Oignon',
+  'cowpeas': 'Niébé', 'beans (niebe)': 'Niébé', 'beans': 'Haricot', 'onion': 'Oignon', 'onions': 'Oignon',
   'tomato': 'Tomate', 'tomatoes': 'Tomate', 'okra': 'Gombo', 'chili': 'Piment',
-  'mango': 'Mangue', 'banana': 'Banane', 'orange': 'Orange',
-  'chicken': 'Poulet', 'mutton': 'Mouton', 'beef': 'Bœuf',
-  'fish': 'Thiof', 'sugar': 'Sucre', 'groundnut oil': 'Huile arachide',
-  'palm oil': 'Huile palme', 'wheat flour': 'Farine blé', 'flour': 'Farine blé',
+  'mango': 'Mangue', 'banana': 'Banane', 'bananas': 'Banane', 'plantain': 'Banane', 'plantains': 'Banane',
+  'orange': 'Orange',
+  'cassava': 'Manioc', 'yam': 'Igname', 'yams': 'Igname', 'sweet potatoes': 'Patate douce', 'cashew': 'Anacarde',
+  'chicken': 'Poulet', 'mutton': 'Mouton', 'beef': 'Bœuf', 'sugar': 'Sucre',
+  'groundnut oil': 'Huile arachide', 'palm oil': 'Huile palme', 'wheat flour': 'Farine blé', 'flour': 'Farine blé',
+  'milk': 'Lait poudre',
 }
 
-async function tryFetchLiveData(logs: string[]): Promise<any[] | null> {
-  // Tentative 1 : OCHA HDX CKAN Datastore (JSON, rapide)
+// Traduit un nom de produit WFP (« Rice (imported) », « Meat (beef) »…) en nom AgriMarché.
+function traduireProduit(brut: string, pays: string): string {
+  const k = (brut || '').toLowerCase().trim()
+  if (!k) return ''
+  if (k === 'fish' || k.startsWith('fish ')) return pays === 'Sénégal' ? 'Thiof' : 'Poisson'
+  if (COMMODITY_MAP[k]) return COMMODITY_MAP[k]
+  const entreParentheses = k.match(/\(([^)]+)\)/)?.[1]?.trim()
+  if (entreParentheses && COMMODITY_MAP[entreParentheses]) return COMMODITY_MAP[entreParentheses]
+  const base = k.replace(/\s*\(.*\)\s*/g, '').trim()
+  if (COMMODITY_MAP[base]) return COMMODITY_MAP[base]
+  if (/^oil/.test(k) && /palm/.test(k)) return 'Huile palme'
+  if (/^oil/.test(k) && /(groundnut|peanut)/.test(k)) return 'Huile arachide'
+  return brut // produit non traduit : conservé tel quel
+}
+
+interface ResultatPays {
+  pays: string
+  statut: 'ok' | 'aucune_donnee_wfp' | 'echec' | 'repli_estimation'
+  lignes: number
+  derniere_date?: string
+  message: string
+}
+
+// Récupère les prix WFP/HDX d'un pays (API CKAN de HDX). Retourne null si rien d'exploitable.
+async function recupererHdx(c: Country, logs: string[]): Promise<{ rows: any[]; derniere: string } | null> {
+  if (!c.hdxId) return null
   try {
-    logs.push('Tentative OCHA HDX CKAN...')
     const pkgRes = await fetch(
-      'https://data.humdata.org/api/3/action/package_show?id=wfp-food-prices-for-senegal',
-      { signal: AbortSignal.timeout(5000) }
+      `https://data.humdata.org/api/3/action/package_show?id=${c.hdxId}`,
+      { signal: AbortSignal.timeout(6000) }
     )
-    if (pkgRes.ok) {
-      const pkg = await pkgRes.json()
-      const resource = (pkg.result?.resources || []).find((r: any) => r.datastore_active === true)
-      if (resource) {
-        const dsRes = await fetch(
-          `https://data.humdata.org/api/3/action/datastore_search?resource_id=${resource.id}&limit=300&sort=date%20desc`,
-          { signal: AbortSignal.timeout(5000) }
-        )
-        if (dsRes.ok) {
-          const ds = await dsRes.json()
-          const records: any[] = ds.result?.records || []
-          if (records.length >= 10) {
-            const today = new Date().toISOString().split('T')[0]
-            const parsed = records.map((r: any) => ({
-              produit: COMMODITY_MAP[(r.commodity || '').toLowerCase()] || r.commodity || '',
-              prix: parseFloat(r.price || '0'),
-              unite: (r.unit || 'kg').toLowerCase(),
-              ville: r.market || r.admin1 || 'Sénégal',
-              pays: 'Sénégal', source: 'FAO',
-              periode: (r.date || today).slice(0, 10),
-              vendeur: 'WFP/OCHA HDX',
-              description: `${r.commodity} — ${r.market} (OCHA live)`,
-            })).filter((r: any) => r.prix > 0 && r.produit)
-            if (parsed.length >= 10) {
-              logs.push(`OCHA CKAN : ${parsed.length} entrées`)
-              return parsed
-            }
-          }
-          logs.push(`OCHA CKAN : ${records.length} records mais insuffisants`)
-        }
-      } else {
-        logs.push('OCHA CKAN : aucune ressource datastore active')
-      }
-    } else {
-      logs.push(`OCHA CKAN package : HTTP ${pkgRes.status}`)
-    }
-  } catch (e: any) { logs.push(`OCHA CKAN échec : ${e.message}`) }
+    if (!pkgRes.ok) { logs.push(`[${c.nom}] HDX package : HTTP ${pkgRes.status}`); return null }
+    const pkg = await pkgRes.json()
+    if (!pkg.success) { logs.push(`[${c.nom}] HDX : jeu de données introuvable (${c.hdxId})`); return null }
 
-  // Tentative 2 : FAO FPMA (souvent HTML, on vérifie)
-  try {
-    logs.push('Tentative FAO FPMA...')
-    const r = await fetch(
-      'https://fpma.apps.fao.org/giews/food-prices/api/v1/datasets/?format=json&country=SN',
-      { signal: AbortSignal.timeout(5000), headers: { Accept: 'application/json' } }
+    const resource = (pkg.result?.resources || []).find((r: any) => r.datastore_active === true)
+    if (!resource) { logs.push(`[${c.nom}] HDX : aucune ressource datastore active (le jeu existe mais n'est pas interrogeable par l'API)`); return null }
+
+    const dsRes = await fetch(
+      `https://data.humdata.org/api/3/action/datastore_search?resource_id=${resource.id}&limit=1000&sort=date%20desc`,
+      { signal: AbortSignal.timeout(6000) }
     )
-    const ct = r.headers.get('content-type') || ''
-    if (r.ok && ct.includes('json')) {
-      const json = await r.json()
-      const items: any[] = json?.results || json?.data || []
-      if (items.length > 0) { logs.push(`FAO FPMA : ${items.length} items`); return null }
-    }
-    logs.push(`FAO FPMA : status=${r.status} ct=${ct.slice(0, 30)}`)
-  } catch (e: any) { logs.push(`FAO FPMA échec : ${e.message}`) }
+    if (!dsRes.ok) { logs.push(`[${c.nom}] HDX datastore : HTTP ${dsRes.status}`); return null }
+    const ds = await dsRes.json()
+    const records: any[] = ds.result?.records || []
+    if (!records.length) { logs.push(`[${c.nom}] HDX : 0 enregistrement`); return null }
 
-  return null
+    // Un seul prix par produit + marché : le plus récent (les enregistrements sont triés par date décroissante)
+    const vus = new Set<string>()
+    const rows: any[] = []
+    let derniere = ''
+    for (const r of records) {
+      const devise = (r.currency || r.Currency || '').toString().toUpperCase()
+      if (devise && devise !== c.devise) continue // on n'affiche jamais un prix dans la mauvaise monnaie
+      const brut = r.commodity || r.Commodity || ''
+      const produit = traduireProduit(brut, c.nom)
+      const prix = parseFloat(r.price || r.Price || '0')
+      const marche = r.market || r.Market || r.admin1 || c.nom
+      const date = (r.date || r.Date || '').toString().slice(0, 10)
+      if (!produit || produit.length < 2 || !(prix > 0) || !date) continue
+      const cle = `${produit}|${marche}`
+      if (vus.has(cle)) continue
+      vus.add(cle)
+      if (date > derniere) derniere = date
+      rows.push({
+        produit, prix, unite: (r.unit || r.Unit || 'kg').toString().toLowerCase(),
+        ville: marche, pays: c.nom, source: 'FAO',
+        periode: date, vendeur: 'WFP/OCHA HDX',
+        description: `${brut} — ${marche} (WFP/HDX ${date.slice(0, 7)})`,
+      })
+    }
+    if (rows.length < 5) { logs.push(`[${c.nom}] HDX : seulement ${rows.length} lignes exploitables, ignoré`); return null }
+    return { rows, derniere }
+  } catch (e: any) {
+    logs.push(`[${c.nom}] HDX échec : ${e.message}`)
+    return null
+  }
 }
 
 export async function GET(req: NextRequest) {
@@ -179,43 +200,75 @@ export async function GET(req: NextRequest) {
 
   const aujourd_hui = new Date().toISOString().split('T')[0]
   const logs: string[] = []
+  const resultats: ResultatPays[] = []
 
-  // Supprimer les anciennes lignes FAO avant d'insérer les nouvelles
-  const { error: deleteError, count: deleted } = await supabase
-    .from('prix_marche')
-    .delete({ count: 'exact' })
-    .eq('source', 'FAO')
+  // Pays concernés : le Sénégal (comportement existant) + les pays ayant un jeu HDX
+  const pays = COUNTRIES_DATA.filter(c => c.hdxId !== null)
+  const sansHdx = COUNTRIES_DATA.filter(c => c.hdxId === null && c.nom !== 'Gambie' && c.nom !== 'Guinée')
 
-  if (deleteError) {
-    logs.push(`Avertissement suppression : ${deleteError.message}`)
-  } else {
-    logs.push(`${deleted ?? 0} anciennes lignes FAO supprimées`)
+  // Récupération en parallèle (limite le temps total)
+  const recus = await Promise.all(pays.map(c => recupererHdx(c, logs)))
+
+  // Pays sans aucune donnée WFP/HDX : on le dit, on n'invente rien
+  for (const c of sansHdx) {
+    logs.push(`[${c.nom}] ${c.wfpNote} → aucune ligne insérée.`)
+    resultats.push({ pays: c.nom, statut: 'aucune_donnee_wfp', lignes: 0, message: c.wfpNote })
   }
-
-  const liveRows = await tryFetchLiveData(logs)
 
   const semaine = Math.floor(Date.now() / (7 * 24 * 3600 * 1000))
-  const staticRows = PRIX_ENRICHIS.map((p, i) => {
-    const v = 1 + ((((semaine * 7 + i * 13) % 17) - 8) / 200)
-    return {
-      produit: p.produit, prix: Math.round(p.prix * v), unite: p.unite,
-      ville: p.ville, pays: 'Sénégal', source: 'FAO',
-      periode: aujourd_hui, vendeur: 'WFP/OCHA HDX',
-      description: `${p.produit} — ${p.ville} (données enrichies Sénégal 2026)`,
+
+  for (let idx = 0; idx < pays.length; idx++) {
+    const c = pays[idx]
+    const recu = recus[idx]
+    let rows: any[] | null = recu?.rows ?? null
+    let statut: ResultatPays['statut'] = 'ok'
+    let message = ''
+
+    if (!rows && c.nom === 'Sénégal') {
+      // Repli historique : estimations Sénégal (jamais utilisées pour les autres pays)
+      rows = PRIX_ENRICHIS.map((p, i) => {
+        const v = 1 + ((((semaine * 7 + i * 13) % 17) - 8) / 200)
+        return {
+          produit: p.produit, prix: Math.round(p.prix * v), unite: p.unite,
+          ville: p.ville, pays: 'Sénégal', source: 'FAO',
+          periode: aujourd_hui, vendeur: 'WFP/OCHA HDX',
+          description: `${p.produit} — ${p.ville} (données enrichies Sénégal 2026)`,
+        }
+      })
+      statut = 'repli_estimation'
+      message = 'HDX indisponible : estimations Sénégal utilisées (pas des relevés WFP).'
     }
-  })
 
-  const rows = liveRows ?? staticRows
-  const source = liveRows
-    ? `OCHA HDX live (${liveRows.length} entrées)`
-    : `Données enrichies Sénégal 2026 (${staticRows.length} produits)`
-  logs.push(`Source : ${source}`)
+    if (!rows) {
+      const msg = 'Aucune donnée HDX exploitable cette fois : anciennes lignes conservées, rien inséré.'
+      logs.push(`[${c.nom}] ${msg}`)
+      resultats.push({ pays: c.nom, statut: 'echec', lignes: 0, message: msg })
+      continue
+    }
 
-  const { data, error } = await supabase.from('prix_marche').insert(rows).select('id')
-  if (error) {
-    logs.push(`Erreur insert : ${error.message}`)
-    return NextResponse.json({ ok: false, error: error.message, logs }, { status: 500 })
+    // On ne remplace que les lignes FAO de CE pays (le Sénégal inclut les anciennes lignes sans pays)
+    let del = supabase.from('prix_marche').delete({ count: 'exact' }).eq('source', 'FAO')
+    del = c.nom === 'Sénégal' ? del.or('pays.eq.Sénégal,pays.is.null') : del.eq('pays', c.nom)
+    const { error: deleteError, count: deleted } = await del
+    if (deleteError) logs.push(`[${c.nom}] Avertissement suppression : ${deleteError.message}`)
+    else logs.push(`[${c.nom}] ${deleted ?? 0} anciennes lignes FAO supprimées`)
+
+    const { data, error } = await supabase.from('prix_marche').insert(rows).select('id')
+    if (error) {
+      logs.push(`[${c.nom}] Erreur insert : ${error.message}`)
+      resultats.push({ pays: c.nom, statut: 'echec', lignes: 0, message: error.message })
+      continue
+    }
+    const n = data?.length ?? rows.length
+    if (!message) message = `${n} prix WFP/HDX insérés (dernier relevé : ${recu?.derniere}).`
+    logs.push(`[${c.nom}] ${message}`)
+    resultats.push({ pays: c.nom, statut, lignes: n, derniere_date: recu?.derniere, message })
   }
 
-  return NextResponse.json({ ok: true, date: aujourd_hui, source, inserted: data?.length ?? rows.length, logs })
+  const inserted = resultats.reduce((t, r) => t + r.lignes, 0)
+  const toutEchoue = resultats.length > 0 && resultats.every(r => r.statut === 'echec')
+  return NextResponse.json(
+    { ok: !toutEchoue, date: aujourd_hui, inserted, parPays: resultats, logs },
+    { status: toutEchoue ? 500 : 200 }
+  )
 }

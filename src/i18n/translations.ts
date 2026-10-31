@@ -12,7 +12,7 @@ export const translations = {
     },
     home: {
       hero_title: "Le marché agricole de l'Afrique de l'Ouest",
-      hero_subtitle: "Connectez producteurs et acheteurs au Sénégal, Gambie et Guinée",
+      hero_subtitle: "Connectez producteurs et acheteurs au Sénégal, en Gambie, Guinée, au Cap-Vert, en Côte d'Ivoire, au Bénin, Burkina Faso et Mali",
       hero_cta: "Voir les produits",
       hero_sell: "Vendre mes produits",
       search_placeholder: "Chercher riz, mil, arachide...",
@@ -129,7 +129,7 @@ export const translations = {
     },
     home: {
       hero_title: "West Africa's Agricultural Marketplace",
-      hero_subtitle: "Connecting farmers and buyers in Senegal, Gambia and Guinea",
+      hero_subtitle: "Connecting farmers and buyers in Senegal, Gambia, Guinea, Cabo Verde, Ivory Coast, Benin, Burkina Faso and Mali",
       hero_cta: "Browse Products",
       hero_sell: "Sell My Products",
       search_placeholder: "Search rice, millet, groundnuts...",

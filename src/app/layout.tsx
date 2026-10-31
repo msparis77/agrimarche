@@ -12,8 +12,8 @@ const inter = Inter({ subsets: ['latin'] })
 
 export const metadata: Metadata = {
   title: 'AgriMarché — Marketplace Agricole Afrique de l\'Ouest',
-  description: 'La plateforme de mise en relation entre producteurs agricoles et acheteurs au Sénégal, Gambie et Guinée',
-  keywords: 'agriculture, marché, Sénégal, Gambie, Guinée, produits agricoles, marketplace',
+  description: 'La plateforme de mise en relation entre producteurs agricoles et acheteurs au Sénégal, en Gambie, en Guinée, au Cap-Vert, en Côte d\'Ivoire, au Bénin, au Burkina Faso et au Mali',
+  keywords: 'agriculture, marché, Sénégal, Gambie, Guinée, Cap-Vert, Côte d\'Ivoire, Bénin, Burkina Faso, Mali, produits agricoles, marketplace',
 }
 
 export default function RootLayout({

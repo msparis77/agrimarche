@@ -1,6 +1,6 @@
 # 🌾 AgriMarché — Marketplace Agricole Afrique de l'Ouest
 
-Plateforme B2B/B2C de mise en relation entre producteurs agricoles et acheteurs au Sénégal, Gambie et Guinée.
+Plateforme B2B/B2C de mise en relation entre producteurs agricoles et acheteurs au Sénégal, en Gambie, en Guinée, au Cap-Vert, en Côte d'Ivoire, au Bénin, au Burkina Faso et au Mali.
 
 ## Stack technique
 - **Frontend** : Next.js 14 (App Router) + TypeScript + Tailwind CSS

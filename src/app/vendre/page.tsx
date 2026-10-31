@@ -6,9 +6,10 @@ import { Upload, X, ChevronLeft } from 'lucide-react'
 import MicButton from '@/components/MicButton'
 import { supabase, getCategories, Category } from '@/lib/supabase'
 import { useAuth } from '@/hooks/useAuth'
+import { COUNTRY_NAMES, getRegions, getDevise, getDeviseLabel } from '@/lib/countries'
 
 const UNITS = ['kg', 'tonne', 'sac', 'litre', 'unité', 'caisse', 'voyage', 'km']
-const COUNTRIES = ['Sénégal', 'Gambie', 'Guinée']
+const COUNTRIES = COUNTRY_NAMES
 
 const CATEGORIES = [
   { id: 'agricole', emoji: '🌾', label: 'Produit agricole', desc: 'Céréales, légumes, fruits, élevage...' },
@@ -111,7 +112,7 @@ export default function PublierPage() {
         description: `[${intentLabel} - ${catInfo?.label}] ${form.description}`,
         unite: form.unite,
         prix: Number(form.prix),
-        devise: 'XOF',
+        devise: getDevise(form.pays),
         pays: form.pays,
         ville: form.ville,
         whatsapp_contact: form.whatsapp_contact,
@@ -267,7 +268,7 @@ export default function PublierPage() {
               className="flex-1 border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-[#166534] transition"
             />
             <div className="flex items-center gap-1 bg-gray-50 border border-gray-200 rounded-xl px-3">
-              <span className="text-gray-500 font-medium text-sm whitespace-nowrap">FCFA /</span>
+              <span className="text-gray-500 font-medium text-sm whitespace-nowrap">{getDeviseLabel(form.pays)} /</span>
               <select
                 value={form.unite}
                 onChange={e => setForm({ ...form, unite: e.target.value })}
@@ -286,15 +287,19 @@ export default function PublierPage() {
             <input
               value={form.ville}
               onChange={e => setForm({ ...form, ville: e.target.value })}
-              placeholder="Dakar, Banjul..."
+              list="villes-du-pays"
+              placeholder={getRegions(form.pays).slice(0, 2).join(', ') + '...'}
               className="w-full border border-gray-200 rounded-xl px-3 py-3 text-sm focus:outline-none focus:border-[#166534] transition"
             />
+            <datalist id="villes-du-pays">
+              {getRegions(form.pays).map(v => <option key={v} value={v} />)}
+            </datalist>
           </div>
           <div>
             <label className="block text-sm font-semibold text-gray-700 mb-1.5">Pays</label>
             <select
               value={form.pays}
-              onChange={e => setForm({ ...form, pays: e.target.value })}
+              onChange={e => setForm({ ...form, pays: e.target.value, ville: '' })}
               className="w-full border border-gray-200 rounded-xl px-3 py-3 text-sm focus:outline-none focus:border-[#166534] bg-white"
             >
               {COUNTRIES.map(c => <option key={c} value={c}>{c}</option>)}

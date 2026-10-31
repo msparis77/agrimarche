@@ -6,9 +6,10 @@ import { Search, SlidersHorizontal, X } from 'lucide-react'
 import { getProducts, getCategories, Product, Category } from '@/lib/supabase'
 import { useLang } from '@/hooks/useLang'
 import ProductCard from '@/components/marketplace/ProductCard'
+import { COUNTRY_NAMES } from '@/lib/countries'
 
-const COUNTRIES = ['Sénégal', 'Gambie', 'Guinée']
-const DEVISES = ['XOF', 'GMD', 'GNF', 'EUR', 'USD']
+const COUNTRIES = COUNTRY_NAMES
+const DEVISES = ['XOF', 'GMD', 'GNF', 'CVE', 'EUR', 'USD']
 
 function SearchContent() {
   const searchParams = useSearchParams()
